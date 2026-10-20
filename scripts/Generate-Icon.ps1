@@ -1,33 +1,63 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$assetDirectory = Join-Path $PSScriptRoot '..\src\Nstrap.App\Assets'
-$bitmap = [System.Drawing.Bitmap]::new(256, 256)
-$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-$background = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('#B7A4FF'))
-$foreground = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('#19132F'))
-$shape = [System.Drawing.Drawing2D.GraphicsPath]::new()
-$shape.AddArc(0, 0, 100, 100, 180, 90)
-$shape.AddArc(155, 0, 100, 100, 270, 90)
-$shape.AddArc(155, 155, 100, 100, 0, 90)
-$shape.AddArc(0, 155, 100, 100, 90, 90)
-$shape.CloseFigure()
-$graphics.FillPath($background, $shape)
-$points = [System.Drawing.Point[]]@(
-    [System.Drawing.Point]::new(58,192), [System.Drawing.Point]::new(58,64),
-    [System.Drawing.Point]::new(94,64), [System.Drawing.Point]::new(164,150),
-    [System.Drawing.Point]::new(164,64), [System.Drawing.Point]::new(200,64),
-    [System.Drawing.Point]::new(200,192), [System.Drawing.Point]::new(164,192),
-    [System.Drawing.Point]::new(94,104), [System.Drawing.Point]::new(94,192))
-$graphics.FillPolygon($foreground, $points)
-$memory = [System.IO.MemoryStream]::new()
-$bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)
-$png = $memory.ToArray()
+
+# NstrapIcon.png is a format-only PNG conversion of the supplied NstrapIcon.webp.
+# Resize the complete artwork with its aspect ratio intact; do not redraw or crop it.
+$assetDirectory = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\src\Nstrap.App\Assets'))
+$source = [System.Drawing.Image]::FromFile((Join-Path $assetDirectory 'NstrapIcon.png'))
+$sizes = @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
+$frames = [System.Collections.Generic.List[byte[]]]::new()
+try {
+    foreach ($size in $sizes) {
+        $bitmap = [System.Drawing.Bitmap]::new($size, $size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $attributes = [System.Drawing.Imaging.ImageAttributes]::new()
+        $memory = [System.IO.MemoryStream]::new()
+        try {
+            $graphics.Clear([System.Drawing.Color]::Transparent)
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+            $attributes.SetWrapMode([System.Drawing.Drawing2D.WrapMode]::TileFlipXY)
+            $scale = [Math]::Min($size / [double]$source.Width, $size / [double]$source.Height)
+            $width = [Math]::Max(1, [int][Math]::Round($source.Width * $scale))
+            $height = [Math]::Max(1, [int][Math]::Round($source.Height * $scale))
+            $rectangle = [System.Drawing.Rectangle]::new(
+                [int][Math]::Floor(($size - $width) / 2), [int][Math]::Floor(($size - $height) / 2), $width, $height)
+            $graphics.DrawImage($source, $rectangle, 0, 0, $source.Width, $source.Height, [System.Drawing.GraphicsUnit]::Pixel, $attributes)
+            $bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)
+            $frames.Add($memory.ToArray())
+        }
+        finally {
+            $memory.Dispose()
+            $attributes.Dispose()
+            $graphics.Dispose()
+            $bitmap.Dispose()
+        }
+    }
+}
+finally { $source.Dispose() }
+
+# Windows ICO directory followed by one PNG image for each requested resolution.
 $stream = [System.IO.File]::Create((Join-Path $assetDirectory 'Nstrap.ico'))
 $writer = [System.IO.BinaryWriter]::new($stream)
-$writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]1)
-$writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0)
-$writer.Write([uint16]1); $writer.Write([uint16]32); $writer.Write([uint32]$png.Length); $writer.Write([uint32]22)
-$writer.Write($png)
-$writer.Dispose(); $memory.Dispose(); $graphics.Dispose(); $bitmap.Dispose()
-$shape.Dispose(); $background.Dispose(); $foreground.Dispose()
+try {
+    $writer.Write([uint16]0)
+    $writer.Write([uint16]1)
+    $writer.Write([uint16]$sizes.Count)
+    $offset = [uint32](6 + 16 * $sizes.Count)
+    for ($index = 0; $index -lt $sizes.Count; $index++) {
+        $dimension = if ($sizes[$index] -eq 256) { [byte]0 } else { [byte]$sizes[$index] }
+        $writer.Write($dimension)
+        $writer.Write($dimension)
+        $writer.Write([byte]0)
+        $writer.Write([byte]0)
+        $writer.Write([uint16]1)
+        $writer.Write([uint16]32)
+        $writer.Write([uint32]$frames[$index].Length)
+        $writer.Write($offset)
+        $offset += [uint32]$frames[$index].Length
+    }
+    foreach ($frame in $frames) { $writer.Write($frame) }
+}
+finally { $writer.Dispose() }

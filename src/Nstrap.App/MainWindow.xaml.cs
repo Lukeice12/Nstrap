@@ -271,6 +271,11 @@ public partial class MainWindow : Window
         Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
     private void DocsClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb(FlagCatalog.SourceUrl));
+    private void CopyDiscordClick(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        Clipboard.SetText("lukeistaken");
+        Model.Success("Discord username copied.", "lukeistaken");
+    });
     private void SupportClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://en.help.roblox.com/hc/en-us/articles/204473560-How-to-Install-and-Play-Roblox"));
     private void GetStudioClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://create.roblox.com/docs/studio/setup"));
     private void Run(Action action) { try { action(); } catch (Exception ex) { Model.Error(ex); } }

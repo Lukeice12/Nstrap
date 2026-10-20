@@ -10,5 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nstrap.Core\Nstrap.Core.csproj" />
+    <Resource Include="Assets\Nstrap.ico" />
+    <Resource Include="Assets\NstrapLogo.png" />
   </ItemGroup>
 </Project>
