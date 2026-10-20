@@ -534,8 +534,8 @@
               <TextBlock Text="{Binding RemovalExecutablePath}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
               <TextBlock Text="Saved data" Style="{StaticResource SettingLabel}" FontSize="12" Margin="0,8,0,0"/>
               <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
-              <CheckBox IsChecked="{Binding NukeAcknowledged}" IsEnabled="{Binding CanChangeNukeAcknowledgement}" Margin="0,14,0,0" AutomationProperties.Name="Accept permanent removal of N strap and saved data">
-                <TextBlock Text="I understand that this permanently deletes the app and its saved data." TextWrapping="Wrap"/>
+              <CheckBox IsChecked="{Binding NukeAcknowledged}" IsEnabled="{Binding CanChangeNukeAcknowledgement}" Margin="0,14,0,0" AutomationProperties.Name="Accept permanent removal of N strap, saved data, and verified downloads">
+                <TextBlock Text="I understand that this permanently deletes the app, its saved data, and verified N strap downloads." TextWrapping="Wrap"/>
               </CheckBox>
               <TextBlock Text="{Binding NukeShortcut}" FontSize="16" Margin="0,16,0,10" AutomationProperties.Name="Nuke shortcut"/>
               <WrapPanel>

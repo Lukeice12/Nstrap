@@ -16,6 +16,7 @@ internal sealed class RemovalJob
     public string Hash { get; set; } = "";
     public int ParentId { get; set; }
     public long ParentStartedUtc { get; set; }
+    public DownloadArchiveProof[]? DownloadProofs { get; set; }
 }
 
 /// <summary>
@@ -32,10 +33,12 @@ internal sealed class RemovalSession : IDisposable
     private readonly Process _process;
     private bool _disposed;
     public bool IsReady => !_disposed && !_process.HasExited;
+    public string DownloadStatus { get; }
 
-    private RemovalSession(EventWaitHandle commit, EventWaitHandle cancel, Process process)
+    private RemovalSession(EventWaitHandle commit, EventWaitHandle cancel, Process process, string downloadStatus)
     {
         _commit = commit; _cancel = cancel; _process = process;
+        DownloadStatus = downloadStatus;
     }
 
     public static async Task<RemovalSession> PrepareAsync()
@@ -43,6 +46,9 @@ internal sealed class RemovalSession : IDisposable
         UpdateHandoff.RequireInstallable();
         string target = Environment.ProcessPath!;
         RequireTarget(target);
+        // The optional GitHub lookup ends before a helper is started. Activation
+        // never performs network discovery or expands the prepared set of files.
+        var downloadProofs = await DownloadRemoval.ReadProofsAsync().ConfigureAwait(false);
         string id = Guid.NewGuid().ToString("N"), token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         string directory = DirectoryFor(id), helperName = Path.GetFileName(target), helper = Path.Combine(directory, helperName);
         UpdateHandoff.CreatePrivateDirectory(Root);
@@ -60,7 +66,8 @@ internal sealed class RemovalSession : IDisposable
             var job = new RemovalJob
             {
                 Token = token, Target = target, Hash = hash,
-                ParentId = parent.Id, ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks
+                ParentId = parent.Id, ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks,
+                DownloadProofs = downloadProofs
             };
             File.Copy(target, helper, false);
             if (!UpdateHandoff.HashMatches(helper, hash)) throw new IOException("The removal helper copy changed.");
@@ -78,10 +85,10 @@ internal sealed class RemovalSession : IDisposable
             start.ArgumentList.Add(token);
             process = Process.Start(start) ?? throw new IOException("Windows did not start the removal helper.");
             var timer = Stopwatch.StartNew();
-            while (timer.Elapsed < TimeSpan.FromSeconds(15))
+            while (timer.Elapsed < TimeSpan.FromSeconds(downloadProofs is { Length: > 0 } ? 20 : 15))
             {
                 if (process.HasExited) throw new IOException(PreparationError(process.ExitCode));
-                if (ready.WaitOne(0)) return new(commit, cancel, process);
+                if (ready.WaitOne(0)) return new(commit, cancel, process, ReadDownloadStatus(directory));
                 await Task.Delay(50).ConfigureAwait(false);
             }
             throw new IOException("The removal helper did not become ready. The nuke shortcut remains disabled.");
@@ -122,6 +129,7 @@ internal sealed class RemovalSession : IDisposable
     {
         string? ownDirectory = null, ownHash = null, ownHelperName = null;
         Mutex? instance = null;
+        DownloadRemoval? downloads = null;
         bool removalStarted = false;
         PreparationStage stage = PreparationStage.Startup;
         try
@@ -169,6 +177,8 @@ internal sealed class RemovalSession : IDisposable
                 targetParents.AddAncestors(Path.GetDirectoryName(job.Target)!);
                 stage = PreparationStage.TargetFile;
                 using var preparedTarget = new RemovalFiles.PreparedExecutable(job.Target, job.Hash);
+                downloads = DownloadRemoval.Prepare(job.DownloadProofs, job.Target);
+                AtomicFile.WriteJson(Path.Combine(directory, "downloads.json"), downloads.Status);
                 stage = PreparationStage.Signals;
                 using var parentExited = new ProcessExitWaitHandle(parent);
                 ready.Set();
@@ -198,13 +208,18 @@ internal sealed class RemovalSession : IDisposable
                 catch { /* Missing or redirected data cannot broaden restoration. */ }
                 try { RemovalFiles.DeleteData(DataRoot, directory); }
                 catch { /* Data cleanup is best effort; the exact EXE is still pinned. */ }
+                downloads.DeleteFiles();
                 RemovalFiles.DeletePinned(target);
             }
+            // No-delete-sharing ancestor pins have now been released. Each
+            // eligible folder still has its own continuous identity read pin.
+            downloads?.DeleteEmptyDirectories();
             return 0;
         }
         catch (Exception error) { return FailureCode(stage, error); }
         finally
         {
+            downloads?.Dispose();
             if (ownDirectory is not null && ownHash is not null && ownHelperName is not null)
             {
                 RemovalFiles.DeleteOwnJob(ownDirectory, ownHash, ownHelperName);
@@ -213,6 +228,20 @@ internal sealed class RemovalSession : IDisposable
             }
             instance?.Dispose();
         }
+    }
+
+    private static string ReadDownloadStatus(string directory)
+    {
+        const string unavailable = "Downloads status is unavailable; unverified files will be kept.";
+        try
+        {
+            string path = Path.Combine(directory, "downloads.json");
+            UpdateHandoff.RequireRegularPath(path);
+            if (new FileInfo(path).Length > 2048) return unavailable;
+            string? status = JsonSerializer.Deserialize<string>(File.ReadAllBytes(path));
+            return status is { Length: > 0 and <= 400 } ? status : unavailable;
+        }
+        catch { return unavailable; }
     }
 
     // The process exit code is the diagnostic channel. Only fixed stage IDs and

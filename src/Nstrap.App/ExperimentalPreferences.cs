@@ -52,6 +52,8 @@ public sealed partial class MainViewModel
         _nukeAcknowledged = State.NukeScopeAcknowledged;
         if (KillSwitchEnabled) _killSwitchStatus = "Waiting to register.";
         if (NukeEnabled) _nukeStatus = "Preparing removal.";
+        else if (State.NukeHotkey is not null && State.NukeScopeVersion != AppState.CurrentNukeScopeVersion)
+            _nukeStatus = "Off. Review the updated removal scope before enabling Nuke.";
     }
 
     public HotkeyBinding? ShortcutDraft(EmergencyHotkey action) => action switch
@@ -130,6 +132,7 @@ public sealed partial class MainViewModel
         var previousShowHide = State.ShowHideHotkey;
         bool previousKillEnabled = State.KillSwitchEnabled, previousNukeEnabled = State.NukeEnabled;
         bool previousAcknowledged = State.NukeScopeAcknowledged;
+        int previousScopeVersion = State.NukeScopeVersion;
         if (action == EmergencyHotkey.KillSwitch)
         {
             State.KillSwitchEnabled = enabled;
@@ -140,6 +143,7 @@ public sealed partial class MainViewModel
             State.NukeEnabled = enabled;
             State.NukeHotkey = binding;
             State.NukeScopeAcknowledged = NukeAcknowledged;
+            State.NukeScopeVersion = NukeAcknowledged ? AppState.CurrentNukeScopeVersion : 0;
         }
         else if (action == EmergencyHotkey.ShowHide) State.ShowHideHotkey = binding;
         else throw new ArgumentOutOfRangeException(nameof(action));
@@ -157,6 +161,7 @@ public sealed partial class MainViewModel
             State.KillSwitchEnabled = previousKillEnabled;
             State.NukeEnabled = previousNukeEnabled;
             State.NukeScopeAcknowledged = previousAcknowledged;
+            State.NukeScopeVersion = previousScopeVersion;
             throw;
         }
         finally

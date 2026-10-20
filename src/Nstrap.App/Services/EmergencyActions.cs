@@ -24,6 +24,7 @@ internal static class EmergencyActions
 
     public const string ScopeDescription =
         "Removes this portable executable and this Windows account's Nstrap data, including profiles, icons, backups and update cache. "
+        + "Also removes verified official Nstrap ZIPs and matching extracted copies in Downloads, including standard extraction folders when empty. "
         + "It first attempts to restore settings still owned by Nstrap when Roblox is closed; external edits are preserved. "
         + "Windows history, logs, restore points and copies elsewhere are outside its scope. "
         + "Locked, protected or redirected files and shared .NET runtime cache can remain.";
@@ -31,6 +32,11 @@ internal static class EmergencyActions
     public static bool IsNukePrepared
     {
         get { lock (Gate) return _removal is { IsReady: true }; }
+    }
+
+    public static string NukeDownloadStatus
+    {
+        get { lock (Gate) return _removal?.DownloadStatus ?? ""; }
     }
 
     // Events are deliberately retained for the process lifetime, including in

@@ -43,6 +43,13 @@ public sealed class ProfileStore(string directory)
         if (state.Profiles.Count == 0) throw new InvalidDataException("The profiles file contains no profiles. The file has been preserved for recovery.");
         if (state.Profiles.Select(p => p.Id).Distinct().Count() != state.Profiles.Count)
             throw new InvalidDataException("The profiles file contains duplicate identifiers.");
+        // An older acknowledgement does not authorize a broader deletion scope.
+        // Keep the shortcut and profiles, but require acceptance before rearming.
+        if (state.NukeScopeVersion != AppState.CurrentNukeScopeVersion)
+        {
+            state.NukeEnabled = false;
+            state.NukeScopeAcknowledged = false;
+        }
         ValidatePreferences(state);
         return state;
     }
@@ -65,7 +72,8 @@ public sealed class ProfileStore(string directory)
             throw new InvalidDataException("Starting with Windows requires Silent mode.");
         if (state.KillSwitchEnabled && state.KillSwitchHotkey is null)
             throw new InvalidDataException("The enabled kill switch needs a shortcut.");
-        if (state.NukeEnabled && (state.NukeHotkey is null || !state.NukeScopeAcknowledged))
+        if (state.NukeEnabled && (state.NukeHotkey is null || !state.NukeScopeAcknowledged
+            || state.NukeScopeVersion != AppState.CurrentNukeScopeVersion))
             throw new InvalidDataException("Nuke needs a shortcut and acceptance of its removal scope.");
         var shortcuts = new[] { state.KillSwitchHotkey, state.NukeHotkey, state.ShowHideHotkey }.Where(binding => binding is not null).ToArray();
         if (shortcuts.Distinct().Count() != shortcuts.Length)

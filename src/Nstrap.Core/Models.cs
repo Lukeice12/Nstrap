@@ -48,6 +48,7 @@ public sealed class FlagProfile : Observable
 
 public sealed class AppState
 {
+    public const int CurrentNukeScopeVersion = 2;
     public int SchemaVersion { get; set; } = 1;
     public Guid SelectedProfileId { get; set; }
     public ObservableCollection<FlagProfile> Profiles { get; set; } = [];
@@ -65,6 +66,7 @@ public sealed class AppState
     public bool NukeEnabled { get; set; }
     public HotkeyBinding? NukeHotkey { get; set; }
     public bool NukeScopeAcknowledged { get; set; }
+    public int NukeScopeVersion { get; set; }
     public HotkeyBinding? ShowHideHotkey { get; set; }
     public bool SilentModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }

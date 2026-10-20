@@ -11,6 +11,8 @@ public partial class MainWindow
     private GlobalHotkeys? _globalHotkeys;
     private EmergencyHotkey? _capturingShortcut;
     private bool _killSwitchRegistered, _nukeRegistered, _showHideRegistered, _experimentalClosing;
+    private static string ArmedNukeStatus =>
+        ("On. The shortcut runs immediately, with no confirmation. " + EmergencyActions.NukeDownloadStatus).TrimEnd();
     private bool CanRegisterEmergencyHotkeys =>
         ((App)Application.Current).UpdateRestart is null || _startupAcknowledged;
 
@@ -90,7 +92,7 @@ public partial class MainWindow
             EnsureGlobalHotkeys().Apply(_killSwitchRegistered ? Model.State.KillSwitchHotkey : null,
                 Model.State.NukeHotkey, _showHideRegistered ? Model.State.ShowHideHotkey : null, () => { });
             _nukeRegistered = true;
-            Model.NukeStatus = "On. The shortcut runs immediately, with no confirmation.";
+            Model.NukeStatus = ArmedNukeStatus;
             Model.NukeError = "";
         }
         catch (Exception error)
@@ -240,7 +242,7 @@ public partial class MainWindow
             _showHideRegistered = showHide;
             if (!Model.NukeEnabled) EmergencyActions.DisarmNuke();
             Model.KillSwitchStatus = kill ? "On. Works while this app is running." : Model.KillSwitchEnabled ? "Unavailable." : "Off.";
-            Model.NukeStatus = nuke ? "On. The shortcut runs immediately, with no confirmation." : Model.NukeEnabled ? "Unavailable." : "Off.";
+            Model.NukeStatus = nuke ? ArmedNukeStatus : Model.NukeEnabled ? "Unavailable." : "Off.";
             Model.ShowHideStatus = showHide ? "Ready. Opens or hides all N strap windows." : "Not set.";
             SetShortcutError(action, "");
             ReleaseUnusedHotkeys();
@@ -249,7 +251,7 @@ public partial class MainWindow
         {
             if (!previouslyPrepared && !_nukeRegistered) EmergencyActions.DisarmNuke();
             if (action == EmergencyHotkey.Nuke)
-                Model.NukeStatus = _nukeRegistered ? "On. The shortcut runs immediately, with no confirmation." : Model.NukeEnabled ? "Unavailable." : "Off.";
+                Model.NukeStatus = _nukeRegistered ? ArmedNukeStatus : Model.NukeEnabled ? "Unavailable." : "Off.";
             SetShortcutError(action, error.Message);
             ReleaseUnusedHotkeys();
         }

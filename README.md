@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.6/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.7/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -109,9 +109,13 @@ Turning off **Start with Windows** removes N strap's own startup entry. Process 
 
 Click **Record shortcut**, press Ctrl or Alt with another key, then **Save shortcut** and enable the action. Nuke also requires accepting its deletion scope. Choose different shortcuts for the two actions. Configuration errors appear in Experimental; pressing an armed shortcut does not open a confirmation or progress window.
 
-Nuke permanently deletes saved profiles. It prepares a background helper while enabled and pauses during app updates or executable renames, then re-arms after restart. Turning it off or closing the app normally cancels removal.
+Nuke permanently deletes saved profiles. It prepares a background helper while enabled and pauses during app updates or executable renames, then re-arms after restart. Turning it off or closing the app normally cancels removal. After upgrading from an older removal scope, review the updated scope in Experimental and enable Nuke again; your shortcut is retained.
 
-Cleanup is limited to N strap's own files. Copies and downloads elsewhere, Windows records, restore points, and the main app's .NET runtime extraction cache are outside its scope. Locked, protected, or redirected files can remain. Roblox settings may also remain if a client is running, their current values have changed elsewhere, or recovery information cannot be used safely.
+Nuke also prepares cleanup of official portable ZIPs and matching extracted copies in your Windows Downloads folder. It checks the ZIPs against GitHub's release hashes before arming and verifies extracted executables against those packages. Empty extraction folders are removed after their verified files. Experimental shows whether download cleanup was prepared; if release information cannot be retrieved, download files stay in place and the app's existing removal still works. Activation does not open a window or make a network request.
+
+The download check recognizes `Nstrap-win-x64.zip`, browser-numbered copies such as `Nstrap-win-x64 (1).zip`, and their standard extraction folders directly inside Downloads. Additional extracted copies need a matching local ZIP to establish ownership; the running executable is already verified separately. The scan has time and size limits and checks up to eight ZIPs and sixteen extracted copies. Turn Nuke off and on to include files downloaded after it was armed. Folders containing other files are kept.
+
+Cleanup is limited to N strap's verified files. Copies and downloads outside the supported Downloads locations, Windows records, restore points, and the main app's .NET runtime extraction cache are outside its scope. Locked, protected, changed, or redirected files can remain. Roblox settings may also remain if a client is running, their current values have changed elsewhere, or recovery information cannot be used safely.
 
 ## Update N strap
 
@@ -122,6 +126,8 @@ The updater uses this repository's public GitHub releases, including preview rel
 Update downloads and helper files are stored in `%LOCALAPPDATA%\Nstrap\updates`. Replacement keeps a backup of the previous executable beside the running app while startup is confirmed. An incomplete installation pauses automatic retries for that version; the Updates tab lets you retry manually.
 
 Versions before **0.1.7** need a one-time manual upgrade: close N strap, download and extract the current ZIP, and run the new `Nstrap.exe`.
+
+**0.2.6 also needs a manual upgrade.** Its process-name parser rejects the portable build's large icon resources, which affects both renaming and its update preparation. Close that copy, download and extract the current ZIP, and open the new executable. Profiles stay in the existing app-data folder.
 
 ## Run from source
 
@@ -151,7 +157,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.6`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.7`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 

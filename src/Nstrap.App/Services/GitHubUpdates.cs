@@ -42,18 +42,7 @@ internal static partial class GitHubUpdates
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(8));
-        using var request = new HttpRequestMessage(HttpMethod.Get,
-            "https://api.github.com/repos/Lukeice12/Nstrap/releases?per_page=100");
-        request.Headers.Accept.ParseAdd("application/vnd.github+json");
-        request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
-            throw new IOException("GitHub is limiting update requests. Try again later or open the releases page.");
-        response.EnsureSuccessStatusCode();
-        await using var memory = new MemoryStream();
-        await CopyBoundedAsync(await response.Content.ReadAsStreamAsync(timeout.Token), memory, 2 * 1024 * 1024, timeout.Token);
-        using var document = JsonDocument.Parse(memory.ToArray(), new JsonDocumentOptions { MaxDepth = 32 });
-        if (document.RootElement.ValueKind != JsonValueKind.Array) throw new IOException("GitHub returned an invalid release list.");
+        using var document = await ReadReleaseListAsync(timeout.Token);
         var candidates = new List<(Version Version, JsonElement Release)>();
         foreach (var release in document.RootElement.EnumerateArray())
         {
@@ -64,11 +53,58 @@ internal static partial class GitHubUpdates
         }
         if (candidates.Count == 0) return null;
         var selected = candidates.OrderByDescending(item => item.Version).First();
-        var assets = selected.Release.GetProperty("assets").EnumerateArray()
+        return ReadRelease(selected.Release, selected.Version);
+    }
+
+    internal static async Task<DownloadArchiveProof[]> ReadRemovalProofsAsync()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        using var document = await ReadReleaseListAsync(timeout.Token);
+        var proofs = new List<DownloadArchiveProof>();
+        foreach (var release in document.RootElement.EnumerateArray().Take(100))
+        {
+            if (release.GetProperty("draft").GetBoolean()) continue;
+            string tag = release.GetProperty("tag_name").GetString() ?? "";
+            if (!TagPattern().IsMatch(tag) || !Version.TryParse(tag[1..], out var version)
+                || version > CurrentVersion) continue;
+            try
+            {
+                var asset = ReadRelease(release, version);
+                proofs.Add(new() { Sha256 = asset.Sha256, Size = asset.Size });
+            }
+            catch (IOException) { /* Old releases without a published digest are not removal evidence. */ }
+        }
+        return proofs.Take(DownloadRemoval.MaxProofs).ToArray();
+    }
+
+    private static async Task<JsonDocument> ReadReleaseListAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            "https://api.github.com/repos/Lukeice12/Nstrap/releases?per_page=100");
+        request.Headers.Accept.ParseAdd("application/vnd.github+json");
+        request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
+            throw new IOException("GitHub is limiting update requests. Try again later or open the releases page.");
+        response.EnsureSuccessStatusCode();
+        await using var memory = new MemoryStream();
+        await CopyBoundedAsync(await response.Content.ReadAsStreamAsync(cancellationToken), memory, 2 * 1024 * 1024, cancellationToken);
+        var document = JsonDocument.Parse(memory.ToArray(), new JsonDocumentOptions { MaxDepth = 32 });
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            document.Dispose();
+            throw new IOException("GitHub returned an invalid release list.");
+        }
+        return document;
+    }
+
+    private static AppRelease ReadRelease(JsonElement release, Version version)
+    {
+        var assets = release.GetProperty("assets").EnumerateArray()
             .Where(asset => asset.GetProperty("name").GetString() == AssetName).ToArray();
         if (assets.Length != 1) throw new IOException("The newest release does not have one supported Windows x64 package. Open releases to download it manually.");
         var asset = assets[0];
-        string expectedUrl = $"{ReleasesPage}/download/v{selected.Version.ToString(3)}/{AssetName}";
+        string expectedUrl = $"{ReleasesPage}/download/v{version.ToString(3)}/{AssetName}";
         string? digest = asset.TryGetProperty("digest", out var value) ? value.GetString() : null;
         long size = asset.GetProperty("size").GetInt64();
         if (asset.GetProperty("state").GetString() != "uploaded"
@@ -77,7 +113,7 @@ internal static partial class GitHubUpdates
             || digest is null || !digest.StartsWith("sha256:", StringComparison.Ordinal)
             || !UpdateHandoff.IsHash(digest[7..]))
             throw new IOException("The release package has incomplete or unexpected integrity information. Use the releases page.");
-        return new(selected.Version, selected.Release.GetProperty("prerelease").GetBoolean(),
+        return new(version, release.GetProperty("prerelease").GetBoolean(),
             new Uri(expectedUrl), digest[7..].ToUpperInvariant(), size);
     }
 

@@ -79,6 +79,85 @@ internal static class RemovalFiles
         public void Dispose() => _read.Dispose();
     }
 
+    /// <summary>Optional Downloads files retain their verified object, not just a pathname.</summary>
+    internal sealed class PreparedDownload : IDisposable
+    {
+        private readonly string _path;
+        private readonly FileStream _read;
+        private readonly FileIdentity _identity;
+        public string Hash { get; }
+        public long Length { get; }
+        public Stream Content { get { _read.Position = 0; return _read; } }
+
+        public PreparedDownload(string path, IReadOnlySet<string> expectedHashes, long maximumLength, Action<int> consumed)
+        {
+            _path = path;
+            var handle = Open(path, GenericRead, FileShare.Read | FileShare.Delete);
+            try
+            {
+                RequireOrdinaryFile(handle, path);
+                long length = RandomAccess.GetLength(handle);
+                if (length <= 0 || length > maximumLength) throw new IOException("The download exceeds the removal limit.");
+                Length = length;
+                _identity = IdentityOf(handle);
+                Hash = HashContent(handle, length, consumed);
+                if (!expectedHashes.Contains(Hash)) throw new IOException("The download is not a verified Nstrap copy.");
+                _read = new FileStream(handle, FileAccess.Read, 128 * 1024);
+            }
+            catch { handle.Dispose(); throw; }
+        }
+
+        public void Delete()
+        {
+            ObjectDisposedException.ThrowIf(_read.SafeFileHandle.IsClosed, this);
+            using var deletion = Open(_path, GenericRead | DeleteAccess, FileShare.Read);
+            RequireOrdinaryFile(deletion, _path);
+            if (!IdentityOf(deletion).Equals(_identity) || RandomAccess.GetLength(deletion) != Length
+                || !string.Equals(HashContent(deletion, Length), Hash, StringComparison.Ordinal))
+                throw new IOException("The prepared download changed.");
+            DeletePinned(deletion);
+        }
+
+        public void Dispose() => _read.Dispose();
+    }
+
+    /// <summary>Only the same prepared directory can be removed, and only when empty.</summary>
+    internal sealed class PreparedEmptyDirectory : IDisposable
+    {
+        private readonly string _path;
+        private readonly SafeFileHandle _read;
+        private readonly FileIdentity _identity;
+
+        public PreparedEmptyDirectory(string path)
+        {
+            _path = path;
+            _read = Open(path, ReadData | ReadAttributes, FileShare.Read | FileShare.Write | FileShare.Delete);
+            try
+            {
+                if (!Inspect(_read, path, out var info)
+                    || (info.Attributes & DirectoryAttribute) == 0
+                    || (info.Attributes & (ReadOnlyAttribute | SystemAttribute | OfflineAttribute)) != 0)
+                    throw new IOException("The extraction folder is redirected or protected.");
+                _identity = IdentityOf(_read);
+            }
+            catch { _read.Dispose(); throw; }
+        }
+
+        public void DeleteIfEmpty()
+        {
+            ObjectDisposedException.ThrowIf(_read.IsClosed, this);
+            using var parents = new Pins();
+            parents.AddAncestors(Path.GetDirectoryName(_path)!);
+            using var deletion = Open(_path, ReadData | ReadAttributes | DeleteAccess, FileShare.Read | FileShare.Write);
+            if (Inspect(deletion, _path, out var info) && (info.Attributes & DirectoryAttribute) != 0
+                && (info.Attributes & (ReadOnlyAttribute | SystemAttribute | OfflineAttribute)) == 0
+                && IdentityOf(deletion).Equals(_identity))
+                DeletePinned(deletion);
+        }
+
+        public void Dispose() => _read.Dispose();
+    }
+
     internal static SafeFileHandle PinExecutable(string path, string expectedHash) =>
         OpenExecutable(path, expectedHash, GenericRead | DeleteAccess, FileShare.Read);
 
@@ -87,23 +166,36 @@ internal static class RemovalFiles
         var handle = Open(path, access, share);
         try
         {
-            if (!Inspect(handle, path, out var info) || info.NumberOfLinks != 1
-                || (info.Attributes & (DirectoryAttribute | ReadOnlyAttribute | SystemAttribute | OfflineAttribute)) != 0)
-                throw new IOException("The portable executable is locked, linked or protected.");
-            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            byte[] buffer = new byte[128 * 1024];
-            long offset = 0;
-            int read;
-            while ((read = RandomAccess.Read(handle, buffer, offset)) != 0)
-            {
-                hash.AppendData(buffer, 0, read);
-                offset += read;
-            }
-            if (!string.Equals(Convert.ToHexString(hash.GetHashAndReset()), expectedHash, StringComparison.OrdinalIgnoreCase))
+            RequireOrdinaryFile(handle, path);
+            if (!string.Equals(HashContent(handle, RandomAccess.GetLength(handle)), expectedHash, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("The executable changed while removal was being prepared.");
             return handle;
         }
         catch { handle.Dispose(); throw; }
+    }
+
+    private static void RequireOrdinaryFile(SafeFileHandle handle, string path)
+    {
+        if (!Inspect(handle, path, out var info) || info.NumberOfLinks != 1
+            || (info.Attributes & (DirectoryAttribute | ReadOnlyAttribute | SystemAttribute | OfflineAttribute)) != 0)
+            throw new IOException("The removal file is locked, linked or protected.");
+    }
+
+    private static string HashContent(SafeFileHandle handle, long expectedLength, Action<int>? consumed = null)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        byte[] buffer = new byte[128 * 1024];
+        long offset = 0;
+        int read;
+        while ((read = RandomAccess.Read(handle, buffer, offset)) != 0)
+        {
+            if (read > expectedLength - offset) throw new IOException("The removal file changed length.");
+            consumed?.Invoke(read);
+            hash.AppendData(buffer, 0, read);
+            offset += read;
+        }
+        if (offset != expectedLength) throw new IOException("The removal file changed length.");
+        return Convert.ToHexString(hash.GetHashAndReset());
     }
 
     internal static bool DeletePinned(SafeFileHandle handle)
@@ -151,6 +243,7 @@ internal static class RemovalFiles
             if (!Inspect(root, directory, out var info) || (info.Attributes & DirectoryAttribute) == 0) return;
             var budget = new CleanupBudget();
             DeleteEntry(Path.Combine(directory, "job.json"), directory, "", 0, budget);
+            DeleteEntry(Path.Combine(directory, "downloads.json"), directory, "", 0, budget);
             DeleteEntry(Path.Combine(directory, "runtime"), directory, "", 0, budget);
             // Exact hash and one link are required even for our helper image.
             using (var executable = PinExecutable(Path.Combine(directory, helperName), hash))

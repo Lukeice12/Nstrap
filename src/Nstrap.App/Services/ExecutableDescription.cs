@@ -98,7 +98,7 @@ internal static class ExecutableDescription
             || optional.CertificateTableDirectory.RelativeVirtualAddress != 0)
             throw new IOException("This executable does not support process-name customization. Use the unsigned portable release.");
         var resource = optional.ResourceTableDirectory;
-        if (resource.Size is < 16 or > 1024 * 1024) throw InvalidLayout();
+        if (resource.Size < 16) throw InvalidLayout();
         var sections = headers.SectionHeaders.Where(section =>
             resource.RelativeVirtualAddress >= section.VirtualAddress
             && (long)resource.RelativeVirtualAddress + resource.Size <= (long)section.VirtualAddress + section.SizeOfRawData).ToArray();
@@ -106,21 +106,23 @@ internal static class ExecutableDescription
             || (sections[0].SectionCharacteristics & SectionCharacteristics.MemExecute) != 0)
             throw InvalidLayout();
         long resourceOffset = (long)sections[0].PointerToRawData + resource.RelativeVirtualAddress - sections[0].VirtualAddress;
-        if (resourceOffset < optional.SizeOfHeaders || resourceOffset + resource.Size > file.Length) throw InvalidLayout();
-        var bytes = new byte[resource.Size];
-        file.Position = resourceOffset;
-        file.ReadExactly(bytes);
+        if (resourceOffset < optional.SizeOfHeaders || resourceOffset + resource.Size > file.Length
+            || (resourceOffset & 3) != 0) throw InvalidLayout();
+        var resources = new ResourceData(file, resourceOffset, resource.Size);
+        // Icons can make the native resource section larger than 1 MiB. Read
+        // only bounded directory tables and the version record we will edit;
+        // unrelated resource payloads neither set a size limit nor get loaded.
         // The release compiler emits one RT_VERSION (#16), resource #1, with
         // one language. Reject additional variants rather than patch only one.
-        int type = DirectoryEntry(bytes, 0, 16, requireSingle: false, isDirectory: true);
-        int version = DirectoryEntry(bytes, type, 1, requireSingle: true, isDirectory: true);
-        int entry = DirectoryEntry(bytes, version, null, requireSingle: true, isDirectory: false);
-        RequireRange(bytes, entry, 16);
-        long versionOffset = (long)U32(bytes, entry) - resource.RelativeVirtualAddress;
-        uint size = U32(bytes, entry + 4);
-        if (versionOffset < 0 || versionOffset > int.MaxValue || size > ushort.MaxValue) throw InvalidLayout();
-        RequireRange(bytes, (int)versionOffset, (int)size);
-        var root = Node.Read(bytes, (int)versionOffset, (int)(versionOffset + size));
+        int type = DirectoryEntry(resources, 0, 16, requireSingle: false, isDirectory: true);
+        int version = DirectoryEntry(resources, type, 1, requireSingle: true, isDirectory: true);
+        int entry = DirectoryEntry(resources, version, null, requireSingle: true, isDirectory: false);
+        byte[] data = resources.Read(entry, 16);
+        long versionOffset = (long)U32(data, 0) - resource.RelativeVirtualAddress;
+        uint size = U32(data, 4);
+        if (versionOffset < 0 || (versionOffset & 3) != 0 || size is < 6 or > ushort.MaxValue) throw InvalidLayout();
+        byte[] bytes = resources.Read(versionOffset, (int)size);
+        var root = Node.Read(bytes, 0, bytes.Length);
         if (root.Key != "VS_VERSION_INFO" || root.Type != 0 || root.ValueLength != 52
             || U32(bytes, root.ValueOffset) != 0xFEEF04BD) throw InvalidLayout();
         var strings = SingleChild(bytes, root, "StringFileInfo");
@@ -136,19 +138,31 @@ internal static class ExecutableDescription
         if (AppIdentity.NormalizeProcessName(oldName) != oldName) throw InvalidLayout();
         int nullStart = description.ValueOffset + oldName.Length * 2;
         if (bytes.AsSpan(nullStart, description.End - nullStart).ContainsAnyExcept((byte)0)) throw InvalidLayout();
-        return resourceOffset + description.ValueOffset;
+        return resourceOffset + versionOffset + description.ValueOffset;
     }
 
-    private static int DirectoryEntry(byte[] bytes, int offset, uint? id, bool requireSingle, bool isDirectory)
+    private sealed record ResourceData(FileStream File, long Offset, int Length)
     {
-        RequireRange(bytes, offset, 16);
-        int named = U16(bytes, offset + 12), count = named + U16(bytes, offset + 14);
+        internal byte[] Read(long offset, int count)
+        {
+            if (offset < 0 || count < 0 || offset > Length || count > Length - offset) throw InvalidLayout();
+            var bytes = new byte[count];
+            File.Position = Offset + offset;
+            File.ReadExactly(bytes);
+            return bytes;
+        }
+    }
+
+    private static int DirectoryEntry(ResourceData resources, int offset, uint? id, bool requireSingle, bool isDirectory)
+    {
+        byte[] header = resources.Read(offset, 16);
+        int named = U16(header, 12), count = named + U16(header, 14);
         if (count is < 1 or > 256 || (requireSingle && (named != 0 || count != 1))) throw InvalidLayout();
-        RequireRange(bytes, offset + 16, count * 8);
+        byte[] bytes = resources.Read((long)offset + 16, count * 8);
         int result = -1;
         for (int i = 0; i < count; i++)
         {
-            int entry = offset + 16 + i * 8;
+            int entry = i * 8;
             uint name = U32(bytes, entry), value = U32(bytes, entry + 4);
             if (id is not null && name != id) continue;
             if (result != -1 || ((value & 0x80000000) != 0) != isDirectory || (name & 0x80000000) != 0)
