@@ -22,6 +22,7 @@ internal sealed class UpdateJob
     public string NewHash { get; set; } = "";
     public bool RestartGuardRequired { get; set; }
     public bool? StartHidden { get; set; }
+    public bool RepairIdentity { get; set; }
 }
 
 internal sealed class UpdateStatus
@@ -183,7 +184,9 @@ internal static class UpdateHandoff
         if (job.Token != ticket.Token || !IsHash(job.OldHash) || !IsHash(job.NewHash)
             || job.ParentId <= 0 || job.ParentStartedUtc <= 0
             || !Version.TryParse(job.OldVersion, out var oldVersion)
-            || !Version.TryParse(job.NewVersion, out var newVersion) || newVersion <= oldVersion
+            || !Version.TryParse(job.NewVersion, out var newVersion)
+            || (job.RepairIdentity ? newVersion != oldVersion || !job.RestartGuardRequired || job.NewHash == job.OldHash
+                : newVersion <= oldVersion)
             || newVersion.Revision != -1 || oldVersion.Revision != -1
             || !Path.IsPathFullyQualified(job.Target)
             || !AppIdentity.IsExecutableName(Path.GetFileName(job.Target))
@@ -235,7 +238,10 @@ internal static class UpdateHandoff
             progress.Report("Downloading update...");
             await GitHubUpdates.DownloadAsync(release, directory, progress, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            job.NewHash = Hash(Path.Combine(directory, "update.exe"));
+            // The release archive was verified before this local customization.
+            // Record the personalized executable hash for the entire handoff.
+            job.NewHash = ExecutableDescription.Apply(Path.Combine(directory, "update.exe"),
+                Path.GetFileNameWithoutExtension(job.Target));
             cancellationToken.ThrowIfCancellationRequested();
             File.Copy(job.Target, Path.Combine(directory, HelperName), false);
             ProtectHelperFile(Path.Combine(directory, HelperName));
@@ -256,6 +262,42 @@ internal static class UpdateHandoff
             // previous unresolved handoff instead of declaring a new one here.
             WriteStatus(previousStatus.AttemptedVersion, "Update preparation failed. " + FriendlyError(ex));
             WriteMarker(directory, "result", "Preparation failed.");
+            throw;
+        }
+    }
+
+    internal static UpdateTicket PrepareIdentityRepair()
+    {
+        RequireInstallable();
+        var ticket = new UpdateTicket(Guid.NewGuid().ToString("N"), Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
+        string directory = JobDirectory(ticket.Id), target = Environment.ProcessPath!;
+        CreatePrivateDirectory(Root);
+        CreatePrivateDirectory(directory);
+        try
+        {
+            using var parent = Process.GetCurrentProcess();
+            using var source = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var job = new UpdateJob
+            {
+                Token = ticket.Token, Target = target, ParentId = parent.Id,
+                ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks,
+                OldVersion = GitHubUpdates.CurrentVersion.ToString(3), NewVersion = GitHubUpdates.CurrentVersion.ToString(3),
+                OldHash = Convert.ToHexString(SHA256.HashData(source)), RepairIdentity = true, RestartGuardRequired = true
+            };
+            string staged = Path.Combine(directory, "update.exe");
+            job.NewHash = ExecutableDescription.CopyWithName(source, staged, Path.GetFileNameWithoutExtension(target));
+            ProtectHelperFile(staged);
+            if (job.OldHash == job.NewHash) throw new IOException("This executable already has the requested Task Manager description.");
+            File.Copy(target, Path.Combine(directory, HelperName), false);
+            ProtectHelperFile(Path.Combine(directory, HelperName));
+            if (!HashMatches(Path.Combine(directory, HelperName), job.OldHash))
+                throw new IOException("The application changed while its process name was being prepared.");
+            AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
+            return ticket;
+        }
+        catch
+        {
+            WriteMarker(directory, "result", "Process-name preparation failed.");
             throw;
         }
     }
@@ -286,7 +328,8 @@ internal static class UpdateHandoff
             {
                 // Persist before permitting process exit/replacement, so a crash
                 // during the handoff cannot produce an automatic restart loop.
-                WriteStatus(job.NewVersion, $"The last update to {job.NewVersion} did not complete. Check for updates to retry.");
+                if (!job.RepairIdentity)
+                    WriteStatus(job.NewVersion, $"The last update to {job.NewVersion} did not complete. Check for updates to retry.");
                 cancellationToken.ThrowIfCancellationRequested();
                 WriteMarker(directory, "commit", ticket.Token);
                 cancellationToken.ThrowIfCancellationRequested();
@@ -328,6 +371,7 @@ internal static class UpdateHandoff
     }
 
     internal static bool? GetRestartStartHidden(UpdateTicket ticket) => LoadJob(ticket).StartHidden;
+    internal static bool IsIdentityRepair(UpdateTicket ticket) => LoadJob(ticket).RepairIdentity;
 
     internal static async Task AwaitRemovalReadyAsync(UpdateTicket ticket, bool rollback)
     {
@@ -392,7 +436,7 @@ internal static class UpdateHandoff
         if (!rollback)
         {
             WriteMarker(JobDirectory(ticket.Id), "ack", ticket.Token);
-            WriteStatus(null, $"Updated to {job.NewVersion}.");
+            if (!job.RepairIdentity) WriteStatus(null, $"Updated to {job.NewVersion}.");
         }
         // Rollback status and failed-version marker are retained for the Updates tab.
     }
@@ -419,6 +463,9 @@ internal static class UpdateHandoff
             if (File.Exists(candidate) || File.Exists(backup)) throw new IOException("An update replacement path already exists.");
             if (!HashMatches(staged, job.NewHash)) throw new IOException("The staged update changed.");
             GitHubUpdates.ValidateExecutable(staged, Version.Parse(job.NewVersion));
+            if (job.RepairIdentity)
+                ExecutableDescription.RequirePersonalizedCopy(job.Target, staged, Path.GetFileNameWithoutExtension(job.Target),
+                    job.OldHash, job.NewHash);
             using var parent = Process.GetProcessById(job.ParentId);
             if (parent.StartTime.ToUniversalTime().Ticks != job.ParentStartedUtc
                 || !string.Equals(parent.MainModule?.FileName, job.Target, StringComparison.OrdinalIgnoreCase))
@@ -436,6 +483,9 @@ internal static class UpdateHandoff
             RequireRegularPath(job.Target); RequireRegularPath(candidate); RequireRegularPath(backup);
             if (!HashMatches(job.Target, job.OldHash) || !HashMatches(candidate, job.NewHash))
                 throw new IOException("The application changed before replacement.");
+            if (job.RepairIdentity)
+                ExecutableDescription.RequirePersonalizedCopy(job.Target, candidate, Path.GetFileNameWithoutExtension(job.Target),
+                    job.OldHash, job.NewHash);
             replacementAttempted = true;
             File.Replace(candidate, job.Target, backup, false);
             if (!HashMatches(backup, job.OldHash) || !HashMatches(job.Target, job.NewHash))
@@ -459,7 +509,7 @@ internal static class UpdateHandoff
         catch (Exception ex)
         {
             if (job is null) return 1;
-            string message = "Update failed. " + FriendlyError(ex);
+            string message = (job.RepairIdentity ? "Process-name repair failed. " : "Update failed. ") + FriendlyError(ex);
             try
             {
                 // Never replace or kill a process that may still be running.
@@ -477,14 +527,14 @@ internal static class UpdateHandoff
                     if (File.Exists(job.Target) && HashMatches(job.Target, job.OldHash))
                     {
                         message += " The previous version is available.";
-                        WriteStatus(job.NewVersion, message);
+                        if (!job.RepairIdentity) WriteStatus(job.NewVersion, message);
                         WriteMarker(directory, "result", message);
                         using var restored = StartProcess(job.Target, "--update-rollback", ticket);
                         return 1;
                     }
                     message += " The replacement could not be safely rolled back; the backup was preserved.";
                 }
-                WriteStatus(ReadStatus().AttemptedVersion, message);
+                if (!job.RepairIdentity) WriteStatus(ReadStatus().AttemptedVersion, message);
                 WriteMarker(directory, "result", message);
             }
             catch { /* Preserve all remaining files if status or rollback cannot be written. */ }

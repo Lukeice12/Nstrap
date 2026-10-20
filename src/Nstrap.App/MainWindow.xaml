@@ -427,11 +427,12 @@
             <Border Style="{StaticResource Card}" Margin="0,4,0,0"><StackPanel>
               <TextBlock Text="Executable and process name" Style="{StaticResource SettingLabel}"/>
               <TextBlock Text="{Binding CurrentExecutableName, StringFormat=Currently running as {0}}" Style="{StaticResource SettingDescription}"/>
-              <TextBlock Text="Changes the .exe filename and Task Manager's Details image name. The Windows file description remains N strap. Restarts the app and removes the old executable after success; update shortcuts to the old filename." Style="{StaticResource SettingDescription}"/>
+              <TextBlock Text="{Binding CurrentTaskManagerName, StringFormat=Task Manager description: {0}}" Style="{StaticResource SettingDescription}"/>
+              <TextBlock Text="Changes the .exe filename and Task Manager's background process name. Apply the current name again to repair a description left by an older version. Restarts the app; update shortcuts if you change the filename." Style="{StaticResource SettingDescription}"/>
               <Grid Margin="0,12,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <TextBox Text="{Binding ProcessNameDraft, UpdateSourceTrigger=PropertyChanged}" MaxLength="68" Margin="0,0,10,0" AutomationProperties.Name="Executable and process name" ToolTip="A filename without a path. The .exe extension is added automatically."/>
-                <Button Grid.Column="1" Content="Rename and restart" Click="RenameProcessClick" IsEnabled="{Binding CanRenameProcess}"/>
+                <Button Grid.Column="1" Content="Apply name and restart" Click="RenameProcessClick" IsEnabled="{Binding CanRenameProcess}"/>
               </Grid>
               <TextBlock Text="{Binding ProcessNameValidation}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0">
                 <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ProcessNameValidation}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>

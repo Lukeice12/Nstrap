@@ -19,6 +19,7 @@ internal sealed class IdentityJob
     public string Source { get; set; } = "";
     public string Target { get; set; } = "";
     public string Hash { get; set; } = "";
+    public string TargetHash { get; set; } = "";
     public int ParentId { get; set; }
     public long ParentStartedUtc { get; set; }
     public bool? StartHidden { get; set; }
@@ -26,8 +27,8 @@ internal sealed class IdentityJob
 
 /// <summary>
 /// The desired executable is also the restart participant. It waits for its
-/// authenticated parent to exit, then enters normal startup. No PE resources
-/// are modified and the original remains until settings and the window load.
+/// authenticated parent to exit, then enters normal startup. Only the reserved
+/// file description changes; the original remains until settings and the window load.
 /// These jobs authorize only same-user, unelevated, same-folder renames.
 /// </summary>
 internal static class AppIdentity
@@ -35,6 +36,8 @@ internal static class AppIdentity
     private static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nstrap", "identity");
     private static readonly string[] JobFiles = ["job.json", "ready", "commit", "result"];
     public static string CurrentProcessName => Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "Nstrap";
+    public static string CurrentTaskManagerName { get; } = Environment.ProcessPath is { } path
+        ? ExecutableDescription.Read(path) : "";
 
     public static string NormalizeProcessName(string? value)
     {
@@ -63,11 +66,23 @@ internal static class AppIdentity
     public static bool NameIsCurrent(string name) =>
         string.Equals(NormalizeProcessName(name), CurrentProcessName, StringComparison.OrdinalIgnoreCase);
 
+    public static bool IdentityIsCurrent(string name) => NameIsCurrent(name)
+        && string.Equals(NormalizeProcessName(name), CurrentTaskManagerName, StringComparison.OrdinalIgnoreCase);
+
     public static async Task StartRenameAsync(string name, bool startHidden = false)
     {
         string normalized = NormalizeProcessName(name);
-        if (NameIsCurrent(normalized)) throw new InvalidOperationException("This executable already uses that process name.");
+        if (IdentityIsCurrent(normalized)) throw new InvalidOperationException("This executable already uses that process name and file description.");
         UpdateHandoff.RequireInstallable();
+        if (NameIsCurrent(normalized))
+        {
+            // An older updater can preserve the filename while installing a
+            // default description. Repair that explicitly using the existing
+            // authenticated replacement/acknowledgement/rollback protocol.
+            var repair = UpdateHandoff.PrepareIdentityRepair();
+            await UpdateHandoff.StartHelperAsync(repair, startHidden);
+            return;
+        }
         string source = Environment.ProcessPath!;
         string target = Path.Combine(Path.GetDirectoryName(source)!, normalized + ".exe");
         RequireApplicationPath(source);
@@ -94,15 +109,15 @@ internal static class AppIdentity
                 ParentId = parent.Id, ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks,
                 StartHidden = startHidden
             };
-            AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
             // No overwrite even when a pre-existing target contains identical
             // bytes. Use the Windows file copy so file attributes are preserved.
-            File.Copy(source, target, false);
+            job.TargetHash = ExecutableDescription.CopyWithName(sourceFile, target, normalized);
             copied = true;
             UpdateHandoff.RequireRegularPath(target);
             using var targetFile = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (Convert.ToHexString(SHA256.HashData(targetFile)) != job.Hash)
+            if (Convert.ToHexString(SHA256.HashData(targetFile)) != job.TargetHash)
                 throw new IOException("The renamed copy failed verification.");
+            AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
             var start = new ProcessStartInfo(target) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(target)! };
             start.ArgumentList.Add("--identity-restart");
             start.ArgumentList.Add(ticket.Id);
@@ -140,6 +155,9 @@ internal static class AppIdentity
         UpdateHandoff.RequireInstallable();
         var job = LoadJob(ticket);
         RequireCurrentTarget(job);
+        if (job.TargetHash.Length != 0)
+            ExecutableDescription.RequirePersonalizedCopy(job.Source, job.Target, Path.GetFileNameWithoutExtension(job.Target),
+                job.Hash, job.TargetHash);
         string directory = JobDirectory(ticket);
         if (ReadMarker(directory, "result") is not null)
             throw new IOException("This process rename has already ended. Open the original executable to try again.");
@@ -206,7 +224,7 @@ internal static class AppIdentity
     private static void RequireCurrentTarget(IdentityJob job)
     {
         if (!string.Equals(Environment.ProcessPath, job.Target, StringComparison.OrdinalIgnoreCase)
-            || !UpdateHandoff.HashMatches(job.Target, job.Hash))
+            || !UpdateHandoff.HashMatches(job.Target, job.TargetHash.Length == 0 ? job.Hash : job.TargetHash))
             throw new IOException("This process rename does not match the running executable.");
     }
 
@@ -240,7 +258,8 @@ internal static class AppIdentity
             throw new IOException("The process rename record is missing or too large.");
         var job = JsonSerializer.Deserialize<IdentityJob>(File.ReadAllBytes(path))
             ?? throw new IOException("Invalid process rename record.");
-        if (job.Token != ticket.Token || !UpdateHandoff.IsHash(job.Hash) || job.ParentId <= 0 || job.ParentStartedUtc <= 0
+        if (job.Token != ticket.Token || !UpdateHandoff.IsHash(job.Hash)
+            || (job.TargetHash != "" && !UpdateHandoff.IsHash(job.TargetHash)) || job.ParentId <= 0 || job.ParentStartedUtc <= 0
             || string.IsNullOrEmpty(job.Source) || string.IsNullOrEmpty(job.Target))
             throw new IOException("The process rename has unexpected fields.");
         RequireApplicationPath(job.Source);

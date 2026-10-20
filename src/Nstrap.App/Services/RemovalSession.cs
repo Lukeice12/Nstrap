@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
@@ -24,7 +25,6 @@ internal sealed class RemovalJob
 /// </summary>
 internal sealed class RemovalSession : IDisposable
 {
-    internal const string HelperName = "Nstrap.Remove.exe";
     internal static string DataRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nstrap");
     private static string Root => Path.Combine(DataRoot, "removal");
     private readonly EventWaitHandle _commit;
@@ -44,16 +44,17 @@ internal sealed class RemovalSession : IDisposable
         string target = Environment.ProcessPath!;
         RequireTarget(target);
         string id = Guid.NewGuid().ToString("N"), token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        string directory = DirectoryFor(id), helper = Path.Combine(directory, HelperName);
+        string directory = DirectoryFor(id), helperName = Path.GetFileName(target), helper = Path.Combine(directory, helperName);
         UpdateHandoff.CreatePrivateDirectory(Root);
         UpdateHandoff.CreatePrivateDirectory(directory);
-        var commit = CreateEvent(id, token, "commit");
-        var cancel = CreateEvent(id, token, "cancel");
-        using var ready = CreateEvent(id, token, "ready");
+        EventWaitHandle? commit = null, cancel = null, ready = null;
         Process? process = null;
         string hash = "";
         try
         {
+            commit = CreateEvent(id, token, "commit");
+            cancel = CreateEvent(id, token, "cancel");
+            ready = CreateEvent(id, token, "ready");
             using var parent = Process.GetCurrentProcess();
             hash = UpdateHandoff.Hash(target);
             var job = new RemovalJob
@@ -79,7 +80,7 @@ internal sealed class RemovalSession : IDisposable
             var timer = Stopwatch.StartNew();
             while (timer.Elapsed < TimeSpan.FromSeconds(15))
             {
-                if (process.HasExited) throw new IOException("The removal helper could not safely prepare. Check file permissions.");
+                if (process.HasExited) throw new IOException(PreparationError(process.ExitCode));
                 if (ready.WaitOne(0)) return new(commit, cancel, process);
                 await Task.Delay(50).ConfigureAwait(false);
             }
@@ -87,13 +88,16 @@ internal sealed class RemovalSession : IDisposable
         }
         catch
         {
-            cancel.Set();
+            cancel?.Set();
             // A started helper owns its cleanup, after it has released all pins.
-            // Before launch, only our newly created exact job may be removed.
-            if (process is null && UpdateHandoff.IsHash(hash)) RemovalFiles.DeleteOwnJob(directory, hash);
-            process?.Dispose(); commit.Dispose(); cancel.Dispose();
+            // A helper that already exited may have failed before authenticating
+            // the job; the parent can still clean its own exact staged copy.
+            if ((process is null || process.HasExited) && UpdateHandoff.IsHash(hash))
+                RemovalFiles.DeleteOwnJob(directory, hash, helperName);
+            process?.Dispose(); commit?.Dispose(); cancel?.Dispose();
             throw;
         }
+        finally { ready?.Dispose(); }
     }
 
     public void Commit() { if (IsReady) _commit.Set(); }
@@ -116,49 +120,69 @@ internal sealed class RemovalSession : IDisposable
 
     private static int RunHelper(string id, string token)
     {
-        string? ownDirectory = null, ownHash = null;
+        string? ownDirectory = null, ownHash = null, ownHelperName = null;
         Mutex? instance = null;
         bool removalStarted = false;
+        PreparationStage stage = PreparationStage.Startup;
         try
         {
             UpdateHandoff.RequireUnelevated();
-            if (!UpdateHandoff.IsHash(token)) return 1;
-            string directory = DirectoryFor(id), helper = Path.Combine(directory, HelperName);
-            if (!string.Equals(Environment.ProcessPath, helper, StringComparison.OrdinalIgnoreCase)) return 1;
+            if (!UpdateHandoff.IsHash(token)) return FailureCode(stage);
+            stage = PreparationStage.Staging;
+            string directory = DirectoryFor(id), helperName = Path.GetFileName(Environment.ProcessPath)!;
+            string helper = Path.Combine(directory, helperName);
+            if (!AppIdentity.IsExecutableName(helperName)
+                || !string.Equals(Environment.ProcessPath, helper, StringComparison.OrdinalIgnoreCase)) return FailureCode(stage);
             UpdateHandoff.RequirePrivateDirectory(Root);
             UpdateHandoff.RequirePrivateDirectory(directory);
+            stage = PreparationStage.Job;
             string jobPath = Path.Combine(directory, "job.json");
             UpdateHandoff.RequireRegularPath(jobPath);
-            if (new FileInfo(jobPath).Length > 16 * 1024) return 1;
+            if (new FileInfo(jobPath).Length > 16 * 1024) return FailureCode(stage);
             var job = JsonSerializer.Deserialize<RemovalJob>(File.ReadAllBytes(jobPath));
             if (job is null || job.Token != token || !UpdateHandoff.IsHash(job.Hash)
-                || job.ParentId <= 0 || job.ParentStartedUtc <= 0) return 1;
+                || job.ParentId <= 0 || job.ParentStartedUtc <= 0) return FailureCode(stage);
+            stage = PreparationStage.Target;
             RequireTarget(job.Target);
-            if (!UpdateHandoff.HashMatches(helper, job.Hash)) return 1;
+            stage = PreparationStage.Helper;
+            if (!string.Equals(helperName, Path.GetFileName(job.Target), StringComparison.OrdinalIgnoreCase)
+                || !UpdateHandoff.HashMatches(helper, job.Hash)) return FailureCode(stage);
+            ownDirectory = directory; ownHash = job.Hash; ownHelperName = helperName;
+            stage = PreparationStage.Target;
             GitHubUpdates.ValidateExecutable(job.Target, GitHubUpdates.CurrentVersion);
+            stage = PreparationStage.Parent;
             using var parent = Process.GetProcessById(job.ParentId);
             if (parent.StartTime.ToUniversalTime().Ticks != job.ParentStartedUtc
-                || !string.Equals(parent.MainModule?.FileName, job.Target, StringComparison.OrdinalIgnoreCase)) return 1;
+                || !string.Equals(parent.MainModule?.FileName, job.Target, StringComparison.OrdinalIgnoreCase)) return FailureCode(stage);
+            stage = PreparationStage.Signals;
             using var commit = EventWaitHandle.OpenExisting(EventName(id, token, "commit"));
             using var cancel = EventWaitHandle.OpenExisting(EventName(id, token, "cancel"));
             using var ready = EventWaitHandle.OpenExisting(EventName(id, token, "ready"));
             // Keep the existing singleton object alive across parent exit. App
             // startup gates on createdNew, so a new launch in this session
             // cannot begin writing profiles while their removal is in progress.
+            stage = PreparationStage.Instance;
             instance = Mutex.OpenExisting(App.InstanceMutexName(DataRoot));
-            ownDirectory = directory; ownHash = job.Hash;
             using (var targetParents = new RemovalFiles.Pins())
             {
+                stage = PreparationStage.TargetDirectory;
                 targetParents.AddAncestors(Path.GetDirectoryName(job.Target)!);
-                using var target = RemovalFiles.PinExecutable(job.Target, job.Hash);
+                stage = PreparationStage.TargetFile;
+                using var preparedTarget = new RemovalFiles.PreparedExecutable(job.Target, job.Hash);
+                stage = PreparationStage.Signals;
                 using var parentExited = new ProcessExitWaitHandle(parent);
                 ready.Set();
                 // One kernel wait: an armed helper consumes no polling timer.
                 if (WaitHandle.WaitAny([cancel, commit, parentExited]) != 1) return 0;
                 // The helper never deletes live app files. The exact verified
                 // process handle prevents PID reuse from satisfying this wait.
-                if (!parent.WaitForExit(15_000)) return 1;
+                stage = PreparationStage.ParentExit;
+                if (!parent.WaitForExit(15_000)) return FailureCode(stage);
                 if (cancel.WaitOne(0)) return 0;
+                // Keep the original read pin alive while obtaining DELETE on
+                // the same file. Nothing is removed if identity or access changed.
+                stage = PreparationStage.DeletionAccess;
+                using var target = preparedTarget.OpenForDeletion();
                 removalStarted = true;
                 // Registry cleanup is independent of profile/data access. The
                 // authenticated target is the only Run command this may remove.
@@ -178,17 +202,69 @@ internal sealed class RemovalSession : IDisposable
             }
             return 0;
         }
-        catch { return 1; } // Helper mode never displays errors or enters normal startup.
+        catch (Exception error) { return FailureCode(stage, error); }
         finally
         {
-            if (ownDirectory is not null && ownHash is not null)
+            if (ownDirectory is not null && ownHash is not null && ownHelperName is not null)
             {
-                RemovalFiles.DeleteOwnJob(ownDirectory, ownHash);
+                RemovalFiles.DeleteOwnJob(ownDirectory, ownHash, ownHelperName);
                 RemovalFiles.RemoveEmptyDirectory(Root);
                 if (removalStarted) RemovalFiles.RemoveEmptyDirectory(DataRoot);
             }
             instance?.Dispose();
         }
+    }
+
+    // The process exit code is the diagnostic channel. Only fixed stage IDs and
+    // native error numbers cross it; no tokens, paths or exception text persist.
+    private enum PreparationStage
+    {
+        Startup = 1, Staging, Job, Helper, Target, Parent, Signals, Instance,
+        TargetDirectory, TargetFile, ParentExit, DeletionAccess
+    }
+    private const int FailurePrefix = 0x4E000000;
+    private static int FailureCode(PreparationStage stage, Exception? error = null)
+    {
+        int native = error is Win32Exception win32 ? win32.NativeErrorCode
+            : error is not null && (error.HResult & unchecked((int)0xFFFF0000)) == unchecked((int)0x80070000)
+                ? error.HResult & 0xFFFF : 0;
+        return FailurePrefix | ((int)stage << 16) | (native & 0xFFFF);
+    }
+
+    private static string PreparationError(int exitCode)
+    {
+        if ((exitCode & unchecked((int)0xFF000000)) != FailurePrefix)
+            return $"The removal helper exited before it became ready (exit 0x{exitCode:X8}). "
+                + "Check Windows Security protection history and access to your local app-data folder. The nuke shortcut remains disabled.";
+        var stage = (PreparationStage)((exitCode >> 16) & 0xFF);
+        string action = stage switch
+        {
+            PreparationStage.Startup => "start without administrator privileges",
+            PreparationStage.Staging => "validate its private staging folder",
+            PreparationStage.Job => "validate its preparation record",
+            PreparationStage.Helper => "verify its copied executable",
+            PreparationStage.Target => "validate the portable executable",
+            PreparationStage.Parent => "authenticate the running application",
+            PreparationStage.Signals => "open its preparation signals",
+            PreparationStage.Instance => "retain the application's instance lock",
+            PreparationStage.TargetDirectory => "lock the portable executable's folder",
+            PreparationStage.TargetFile => "read and identify the portable executable",
+            _ => "complete preparation"
+        };
+        int native = exitCode & 0xFFFF;
+        string advice = native switch
+        {
+            5 => "Windows denied access. Use an extracted copy in a writable local folder and check Windows Security protection history.",
+            32 or 33 => "Another program is holding a conflicting file lock. Close other copies or tools using this executable, then enable the shortcut again.",
+            2 or 3 => "A required file or folder disappeared. Extract a fresh portable copy and enable the shortcut again.",
+            1 or 50 or 87 when stage is PreparationStage.TargetFile or PreparationStage.TargetDirectory =>
+                "Windows could not perform a required file identity or locking operation on this drive. Extract the app onto a local NTFS drive.",
+            _ => stage == PreparationStage.Startup
+                ? "Restart N strap normally, without Run as administrator."
+                : "Restart the app from an extracted portable copy in a regular local folder."
+        };
+        return $"The removal helper could not {action}. {advice} "
+            + $"The nuke shortcut remains disabled. [removal:{stage}:{native}]";
     }
 
     private sealed class ProcessExitWaitHandle : WaitHandle

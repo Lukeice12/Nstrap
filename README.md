@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.5/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.6/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -86,7 +86,7 @@ App windows share a title bar with the selected theme, name, and icon. Moving, r
 
 The display name changes the window title and sidebar. Choose a custom PNG or ICO for the window and taskbar icon, or reset to the included artwork. N strap saves its own copy of the selected image.
 
-The process name changes the executable's filename and the image name in Task Manager's **Details** tab. It requires a restart and a writable local app folder. The new name must not already exist in that folder. The original executable is removed only after the renamed copy opens successfully; shortcuts pointing to the old filename need updating. Automatic updates preserve the chosen filename. The compiled file description and Explorer executable icon remain N strap's.
+The process name changes the executable's filename and the description shown for background processes in Task Manager. It requires a restart and a writable local app folder. A new filename must not already exist in that folder. The original executable is removed only after the renamed copy opens successfully; shortcuts pointing to the old filename need updating. Automatic updates preserve the chosen name. If an older build left the Task Manager label unchanged, reapply the same process name after upgrading. The Explorer executable icon remains N strap's.
 
 ### Silent mode and background startup
 
@@ -151,7 +151,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.5`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.6`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 

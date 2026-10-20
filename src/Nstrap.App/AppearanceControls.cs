@@ -32,7 +32,7 @@ public partial class MainWindow
     private async void RenameProcessClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
         string name = AppIdentity.NormalizeProcessName(Model.ProcessNameDraft);
-        if (AppIdentity.NameIsCurrent(name)) return;
+        if (AppIdentity.IdentityIsCurrent(name)) return;
         try
         {
             Model.Save();

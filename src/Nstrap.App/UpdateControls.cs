@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Nstrap.App.Services;
@@ -41,8 +42,18 @@ public partial class MainWindow
             {
                 UpdateHandoff.AcknowledgeStartup(restart, app.UpdateRolledBack);
                 _startupAcknowledged = true;
-                Model.UpdateStatus = UpdateHandoff.ReadStatus().Message;
-                if (app.UpdateRolledBack) UpdatesNav.IsChecked = true;
+                if (UpdateHandoff.IsIdentityRepair(restart))
+                {
+                    AppearanceNav.IsChecked = true;
+                    if (app.UpdateRolledBack)
+                        Model.Error(new IOException("The process-name repair did not complete. The original executable was restored; apply the name again to retry."));
+                    else Model.Success("Task Manager name updated.", $"Running as {Model.CurrentExecutableName}.");
+                }
+                else
+                {
+                    Model.UpdateStatus = UpdateHandoff.ReadStatus().Message;
+                    if (app.UpdateRolledBack) UpdatesNav.IsChecked = true;
+                }
             }
             catch (Exception ex) { UpdateFailure(ex); }
             return false;

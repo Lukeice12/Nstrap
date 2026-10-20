@@ -43,9 +43,48 @@ internal static class RemovalFiles
         }
     }
 
-    internal static SafeFileHandle PinExecutable(string path, string expectedHash)
+    /// <summary>
+    /// Reading a live single-file application must remain compatible with its
+    /// loader. Deletion rights are acquired only after the parent has exited.
+    /// Both handles stay open during that transition, so a replacement at the
+    /// same path (even with identical bytes) cannot become the deletion target.
+    /// </summary>
+    internal sealed class PreparedExecutable : IDisposable
     {
-        var handle = Open(path, GenericRead | DeleteAccess, FileShare.Read);
+        private readonly string _path, _hash;
+        private readonly SafeFileHandle _read;
+        private readonly FileIdentity _identity;
+
+        public PreparedExecutable(string path, string expectedHash)
+        {
+            _path = path; _hash = expectedHash;
+            _read = OpenExecutable(path, expectedHash, GenericRead, FileShare.Read | FileShare.Delete);
+            try { _identity = IdentityOf(_read); }
+            catch { _read.Dispose(); throw; }
+        }
+
+        public SafeFileHandle OpenForDeletion()
+        {
+            ObjectDisposedException.ThrowIf(_read.IsClosed, this);
+            var deletion = PinExecutable(_path, _hash);
+            try
+            {
+                if (!IdentityOf(deletion).Equals(_identity))
+                    throw new IOException("The portable executable was replaced after removal was prepared.");
+                return deletion;
+            }
+            catch { deletion.Dispose(); throw; }
+        }
+
+        public void Dispose() => _read.Dispose();
+    }
+
+    internal static SafeFileHandle PinExecutable(string path, string expectedHash) =>
+        OpenExecutable(path, expectedHash, GenericRead | DeleteAccess, FileShare.Read);
+
+    private static SafeFileHandle OpenExecutable(string path, string expectedHash, uint access, FileShare share)
+    {
+        var handle = Open(path, access, share);
         try
         {
             if (!Inspect(handle, path, out var info) || info.NumberOfLinks != 1
@@ -101,10 +140,11 @@ internal static class RemovalFiles
         // The current helper job is removed separately, after all work ends.
     }
 
-    internal static void DeleteOwnJob(string directory, string hash)
+    internal static void DeleteOwnJob(string directory, string hash, string helperName)
     {
         try
         {
+            if (!AppIdentity.IsExecutableName(helperName)) return;
             using var ancestors = new Pins();
             ancestors.AddAncestors(Path.GetDirectoryName(directory)!);
             using var root = Open(directory, ReadData | ReadAttributes | DeleteAccess, FileShare.Read | FileShare.Write);
@@ -113,7 +153,7 @@ internal static class RemovalFiles
             DeleteEntry(Path.Combine(directory, "job.json"), directory, "", 0, budget);
             DeleteEntry(Path.Combine(directory, "runtime"), directory, "", 0, budget);
             // Exact hash and one link are required even for our helper image.
-            using (var executable = PinExecutable(Path.Combine(directory, RemovalSession.HelperName), hash))
+            using (var executable = PinExecutable(Path.Combine(directory, helperName), hash))
                 DeletePinned(executable);
             DeletePinned(root); // Succeeds only if empty.
         }
@@ -172,9 +212,22 @@ internal static class RemovalFiles
         public bool Exhausted => Entries >= 50_000 || Environment.TickCount64 - _started >= 60_000;
     }
 
-    private static SafeFileHandle Open(string path, uint access, FileShare share) =>
-        CreateFileW(@"\\?\" + Path.GetFullPath(path), access, share, IntPtr.Zero, 3,
+    private static SafeFileHandle Open(string path, uint access, FileShare share)
+    {
+        var handle = CreateFileW(@"\\?\" + Path.GetFullPath(path), access, share, IntPtr.Zero, 3,
             0x02000000 | 0x00200000, IntPtr.Zero);
+        if (!handle.IsInvalid) return handle;
+        int error = Marshal.GetLastWin32Error();
+        handle.Dispose();
+        throw new Win32Exception(error);
+    }
+
+    private static FileIdentity IdentityOf(SafeFileHandle handle)
+    {
+        if (!GetFileInformationByHandleEx(handle, 18, out var identity, (uint)Marshal.SizeOf<FileIdentity>()))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        return identity;
+    }
 
     private static bool Inspect(SafeFileHandle handle, string path, out FileInformation info)
     {
@@ -201,6 +254,13 @@ internal static class RemovalFiles
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeFileTime { public uint Low, High; }
     [StructLayout(LayoutKind.Sequential)]
+    private readonly struct FileIdentity : IEquatable<FileIdentity>
+    {
+        private readonly ulong _volume, _low, _high;
+        public bool Equals(FileIdentity other) =>
+            _volume == other._volume && _low == other._low && _high == other._high;
+    }
+    [StructLayout(LayoutKind.Sequential)]
     private struct FileInformation
     {
         public uint Attributes;
@@ -215,6 +275,9 @@ internal static class RemovalFiles
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetFileInformationByHandle(SafeFileHandle file, out FileInformation information);
+    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandleEx(SafeFileHandle file, int kind, out FileIdentity information, uint size);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)]
     private static extern uint GetFinalPathNameByHandleW(SafeFileHandle file, StringBuilder path, uint size, uint flags);
     [DllImport("kernel32.dll", EntryPoint = "SetFileInformationByHandle", SetLastError = true)]

@@ -13,6 +13,7 @@ public sealed partial class MainViewModel
     public string DisplayName => State.DisplayName;
     public string CurrentProcessName => AppIdentity.CurrentProcessName;
     public string CurrentExecutableName => CurrentProcessName + ".exe";
+    public string CurrentTaskManagerName => AppIdentity.CurrentTaskManagerName;
     public bool HasCustomIcon => State.CustomIconFile is not null;
     public string IconStatus { get => _iconStatus; private set => Set(ref _iconStatus, value); }
 
@@ -51,7 +52,7 @@ public sealed partial class MainViewModel
         }
     }
     public bool CanRenameProcess => ProcessNameValidation.Length == 0
-        && !AppIdentity.NameIsCurrent(ProcessNameDraft);
+        && !AppIdentity.IdentityIsCurrent(ProcessNameDraft);
 
     private void InitializeAppearancePreferences()
     {
