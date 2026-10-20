@@ -43,10 +43,22 @@ public partial class MainWindow
         bool enabled = checkbox.IsChecked == true;
         await Busy(async () =>
         {
-            Model.QueueFpsChange(enabled);
+            Model.QueueFpsChange(enabled, enabled ? Model.ReadFpsCapDraft() : null);
             await ReconcileFpsAsync();
         });
+        checkbox.GetBindingExpression(CheckBox.IsCheckedProperty)?.UpdateTarget();
     }
+
+    private async void SaveFpsCapClick(object sender, RoutedEventArgs e) => await Busy(async () =>
+    {
+        Model.SaveFpsCapDraft();
+        if (Model.UnlockFps || Model.FpsChangePending) await ReconcileFpsAsync();
+        else
+        {
+            Model.FpsStatus = $"Saved {Model.FpsCap:N0} FPS. Turn on Custom frame rate to apply this cap.";
+            Model.Success("FPS cap saved.", Model.FpsStatus);
+        }
+    });
 
     private async void RetryFpsClick(object sender, RoutedEventArgs e)
     {
@@ -64,7 +76,8 @@ public partial class MainWindow
                 Model.QueueFpsChange(Model.UnlockFps);
             }
             bool enabled = Model.UnlockFps;
-            var result = await Task.Run(() => Model.FpsSettings.Change(enabled, OfficialClient.IsPlayerRunningForCurrentUser));
+            int cap = Model.FpsCap;
+            var result = await Task.Run(() => Model.FpsSettings.Change(enabled, cap, OfficialClient.IsPlayerRunningForCurrentUser));
             if (result.Deferred)
             {
                 Model.FpsStatus = "Pending — close your account's Roblox Player sessions to apply; keep N strap open.";
@@ -73,7 +86,7 @@ public partial class MainWindow
                 return Model.FpsStatus;
             }
             Model.CompleteFpsChange();
-            Model.FpsStatus = enabled ? "Cap set to 9,999 FPS for Player's next start."
+            Model.FpsStatus = enabled ? $"Cap set to {cap:N0} FPS for Player's next start."
                 : result.KeptExternal ? "Off. Kept the cap changed outside N strap."
                 : result.Cap is not null ? "Previous cap restored for Player's next start."
                 : "Off. Player's existing cap is unchanged.";

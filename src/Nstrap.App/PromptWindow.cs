@@ -25,18 +25,19 @@ public sealed class PromptWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
-            CaptionHeight = 48, ResizeBorderThickness = new Thickness(0),
-            GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(8),
+            CaptionHeight = 44, ResizeBorderThickness = new Thickness(0),
+            GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(4),
             UseAeroCaptionButtons = false
         });
         var layout = new DockPanel();
-        var caption = new Grid { Height = 48, Background = (Brush)FindResource("SurfaceBrush") };
+        var caption = new Grid { Height = 44, Background = (Brush)FindResource("SurfaceBrush") };
         caption.ColumnDefinitions.Add(new ColumnDefinition());
         caption.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
         caption.Children.Add(new TextBlock
         {
-            Text = title, FontSize = 16, FontWeight = FontWeights.SemiBold,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, 0, 0)
+            Text = title, FontSize = 14, FontWeight = FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, 12, 0)
         });
         var close = new Button
         {
@@ -51,7 +52,7 @@ public sealed class PromptWindow : Window
         caption.Children.Add(close);
         DockPanel.SetDock(caption, Dock.Top);
         layout.Children.Add(caption);
-        var panel = new StackPanel { Margin = new Thickness(24, 20, 24, 24) };
+        var panel = new StackPanel { Margin = new Thickness(20, 20, 20, 20) };
         panel.Children.Add(new TextBlock
         {
             Text = description, Style = (Style)FindResource("Muted"), Margin = new Thickness(0, 0, 0, 16)
@@ -59,10 +60,10 @@ public sealed class PromptWindow : Window
         _input = new TextBox { Text = initial, MaxLength = 120 };
         AutomationProperties.SetName(_input, title);
         panel.Children.Add(_input);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 22, 0, 0) };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, Margin = new Thickness(0, 0, 8, 0) };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
+        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80, Margin = new Thickness(0, 0, 8, 0) };
         cancel.Click += (_, _) => Close();
-        var submitButton = new Button { Content = actionLabel, IsDefault = true, Style = (Style)FindResource("Primary") };
+        var submitButton = new Button { Content = actionLabel, IsDefault = true, MinWidth = 80, Style = (Style)FindResource("Primary") };
         submitButton.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(_input.Text)) DialogResult = true; else _input.Focus(); };
         buttons.Children.Add(cancel); buttons.Children.Add(submitButton);
         panel.Children.Add(buttons);
@@ -74,7 +75,7 @@ public sealed class PromptWindow : Window
         Content = new Border
         {
             Background = (Brush)FindResource("CanvasBrush"), BorderBrush = (Brush)FindResource("LineBrush"),
-            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Child = layout
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = layout
         };
         PreviewKeyDown += (_, args) =>
         {

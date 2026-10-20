@@ -23,27 +23,33 @@ public static class OfficialClient
         return running;
     }
 
-    public static bool IsPlayerRunningForCurrentUser()
+    public static bool IsPlayerRunningForCurrentUser() => IsRobloxRunningForCurrentUser(includeStudio: false);
+    public static bool IsRobloxRunningForCurrentUser() => IsRobloxRunningForCurrentUser(includeStudio: true);
+
+    private static bool IsRobloxRunningForCurrentUser(bool includeStudio)
     {
         using var identity = WindowsIdentity.GetCurrent();
-        var user = identity.User ?? throw new IOException("Windows could not identify the account for the FPS settings.");
+        var user = identity.User ?? throw new IOException("Windows could not identify the account for Roblox settings.");
         IntPtr buffer = IntPtr.Zero;
         try
         {
             // WTS supplies the primary-token SID without opening another user's token.
-            // Do not filter by session: this account's FPS settings are shared across sessions.
+            // Do not filter by session: settings and cache are shared across this account's sessions.
             if (!WTSEnumerateProcesses(IntPtr.Zero, 0, 1, out buffer, out int count))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not check Player sessions for your account. The FPS change remains pending.");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not check Roblox sessions for your account. No further settings or cache changes can be made.");
             if (count < 0 || (count > 0 && buffer == IntPtr.Zero))
-                throw new IOException("Windows returned an invalid Player session list. The FPS change remains pending.");
+                throw new IOException("Windows returned an invalid Roblox session list. No further settings or cache changes can be made.");
             int size = Marshal.SizeOf<WtsProcessInfo>();
             for (int index = 0; index < count; index++)
             {
                 var process = Marshal.PtrToStructure<WtsProcessInfo>(IntPtr.Add(buffer, checked(index * size)));
-                if (!string.Equals(Marshal.PtrToStringUni(process.ProcessName), "RobloxPlayerBeta.exe", StringComparison.OrdinalIgnoreCase))
+                string? name = Marshal.PtrToStringUni(process.ProcessName);
+                bool player = string.Equals(name, "RobloxPlayerBeta.exe", StringComparison.OrdinalIgnoreCase);
+                bool studio = includeStudio && string.Equals(name, "RobloxStudioBeta.exe", StringComparison.OrdinalIgnoreCase);
+                if (!player && !studio)
                     continue;
                 if (process.UserSid == IntPtr.Zero)
-                    throw new IOException("Windows could not identify the account for a Player session. The FPS change remains pending.");
+                    throw new IOException("Windows could not identify the account for a Roblox session. No further settings or cache changes can be made.");
                 if (user.Equals(new SecurityIdentifier(process.UserSid))) return true;
             }
             return false;

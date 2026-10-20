@@ -1,6 +1,6 @@
 # N strap
 
-A Windows launcher and FastFlag manager for Roblox. Built in C# with a native WPF interface.
+A Windows launcher and FastFlag manager for Roblox, focused on performance settings and a compact desktop interface.
 
 N strap is an original implementation. Its application code uses .NET and Windows APIs, with no third-party runtime NuGet packages, telemetry, Roblox login, or credential collection.
 
@@ -8,14 +8,18 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.11/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.0/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
 - Launch Roblox Player or Studio from a clean desktop interface.
 - Create local FastFlag profiles, toggle individual flags, and import or export JSON.
 - Drop a `.txt` or `.json` flag file onto the window, or click **Import**, to import and apply it.
-- Toggle **Unlock FPS** to request a 9,999 FPS cap in Roblox Player and restore the previous cap when turned off.
+- Enable **Custom frame rate** and choose a Player cap from 1–9,999 FPS.
+- Choose automatic graphics quality or a level from 1–10, with an option to restore the previous setting.
+- Optionally close N strap after Roblox launches.
+- Search settings from the sidebar.
+- Manually clear old Roblox cache files to free disk space.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
 - Apply profiles to an installed client with backups and recovery information.
 - Detect Roblox installations or choose an installation manually.
@@ -29,7 +33,7 @@ Roblox decides which flags its clients honor. The app includes informational lab
 1. In **Overview**, select a detected Player or Studio installation. Use **Install / update Player** if Player is missing.
 2. In **FastFlags**, create a profile and add flags individually, click **Import**, or drop a `.txt` or `.json` flag file onto the window. Profiles start empty.
 3. File import merges into the selected profile and immediately attempts to apply it to the selected installation. You can also choose **Apply profile** or **Launch Roblox**. Launch closes all running Roblox Player sessions in your current Windows session before applying settings and starting the selected client. Studio stays open. Applying before launch is enabled by default; using **Apply profile** alone still requires restarting a running client to load the saved flags.
-4. Use **Recovery → Restore previous values** to undo N strap's managed changes.
+4. Use **Recovery → Restore** to undo N strap's managed changes.
 
 Edits save automatically. File import replaces values and enabled states for matching names; other profile entries are retained. The whole file is validated before importing. If automatic application cannot finish, the imported profile stays saved and the app reports what needs attention.
 
@@ -39,11 +43,25 @@ The JSON editor opens a record array containing every flag, including disabled e
 
 In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
 
-**Unlock FPS** is on Overview and controls Roblox Player's global framerate setting independently of FastFlag profiles. It sets a high cap of 9,999 FPS; it cannot guarantee a particular framerate or override graphics-driver limits. If Player is running under your Windows account, the change waits until it closes, including sessions elsewhere on the same computer. Another Windows account's Player does not block the change. Keep N strap open to apply the pending change, or reopen N strap before launching Roblox. Turning the toggle off restores the recorded previous cap while preserving other Roblox settings. If the cap has since been changed elsewhere, that newer value is kept instead.
+### Performance settings
+
+On **Overview**, enable **Custom frame rate** and choose a cap from 1–9,999 FPS with **Set limit**. The default is 9,999. This controls Roblox Player's global framerate preference independently of FastFlag profiles; it cannot guarantee a particular framerate or override graphics-driver limits. Turning the toggle off restores the previous cap. If the cap has since been changed elsewhere, that newer value is kept instead.
+
+**Graphics quality** offers Automatic and manual levels 1–10. Lower levels reduce visual detail. Apply a level for Player's next start, or restore the previous setting. N strap preserves unrelated settings and later changes made outside the app.
+
+If Player is running under your Windows account, pending settings wait until it closes, including sessions elsewhere on the same computer. Another Windows account's Player does not block the change. Keep N strap open to apply pending changes, or reopen it before launching Roblox.
+
+Enable **Close N strap after launch** to exit after Roblox starts successfully. It is off by default.
+
+### Find settings and clean the cache
+
+Use **Search settings** in the sidebar to find a setting and open its page. FastFlags retain their own name filter, and the JSON editor has separate Ctrl+F text search.
+
+The manual cache cleaner removes old files from `%LOCALAPPDATA%\Roblox\rbx-storage`, which is shared by Player and Studio. Both clients must be closed for your Windows account. Cleanup frees disk space; it does not increase FPS, and Roblox may download cached content again. It does not run automatically.
 
 ## Update N strap
 
-Open **Updates** to see the installed version, change **Automatically update when N strap starts**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
+Open **Updates** to see the installed version, change **Update automatically**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
 
 The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 `Nstrap.exe`, running normally from a writable local folder. Updates do not request administrator access.
 
@@ -79,7 +97,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.1.11`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.0`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 
@@ -105,6 +123,6 @@ App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `bac
 
 Profile saves that would exceed the existing 10 MB loading limit are rejected before replacing the saved file. Applying flags also checks that the combined settings, including existing entries, stay within the reader's 5,000-entry limit.
 
-Unlock FPS changes the existing `FramerateCap` property in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Its settings-file backups are stored in `backups\player-fps`, with ownership and interrupted-update records in `recovery`.
+FPS and graphics controls change the existing `FramerateCap` and `SavedQualityLevel` properties in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Settings backups and ownership records allow restoration without replacing unrelated preferences. N strap does not make Roblox's settings file read-only.
 
 N strap is an independent project and is not affiliated with Roblox.

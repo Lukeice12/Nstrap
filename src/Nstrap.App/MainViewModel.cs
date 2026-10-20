@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.11";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.0";
     public bool UnlockFps => State.UnlockFps;
     public bool FpsChangePending => State.FpsChangePending;
     public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
@@ -86,6 +86,7 @@ public sealed partial class MainViewModel : Observable
         FpsSettings = new(directory, System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "GlobalBasicSettings_13.xml"));
         State = Store.Load();
+        InitializePerformancePreferences();
         if (State.FpsChangePending) _fpsStatus = "FPS change pending.";
         _selectedProfile = State.Profiles.FirstOrDefault(p => p.Id == State.SelectedProfileId) ?? State.Profiles[0];
         FlagsView = MakeView();
@@ -187,14 +188,18 @@ public sealed partial class MainViewModel : Observable
                 State.SelectedProfileId = previousId;
             });
     }
-    public void QueueFpsChange(bool enabled)
+    public void QueueFpsChange(bool enabled, int? cap = null)
     {
+        int nextCap = cap ?? State.FpsCap;
+        ValidateFpsCap(nextCap);
         bool oldEnabled = State.UnlockFps, oldPending = State.FpsChangePending;
+        int oldCap = State.FpsCap;
         State.UnlockFps = enabled;
+        State.FpsCap = nextCap;
         State.FpsChangePending = true;
         try { Save(); }
-        catch { State.UnlockFps = oldEnabled; State.FpsChangePending = oldPending; throw; }
-        finally { Changed(nameof(UnlockFps)); Changed(nameof(FpsChangePending)); }
+        catch { State.UnlockFps = oldEnabled; State.FpsCap = oldCap; State.FpsChangePending = oldPending; throw; }
+        finally { Changed(nameof(UnlockFps)); Changed(nameof(FpsCap)); Changed(nameof(FpsChangePending)); }
     }
     public void CompleteFpsChange()
     {

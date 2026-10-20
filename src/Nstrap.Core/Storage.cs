@@ -43,13 +43,22 @@ public sealed class ProfileStore(string directory)
         if (state.Profiles.Count == 0) throw new InvalidDataException("The profiles file contains no profiles. The file has been preserved for recovery.");
         if (state.Profiles.Select(p => p.Id).Distinct().Count() != state.Profiles.Count)
             throw new InvalidDataException("The profiles file contains duplicate identifiers.");
+        ValidatePreferences(state);
         return state;
     }
     public void Save(AppState state)
     {
+        ValidatePreferences(state);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(state, JsonDefaults.Options);
         if (bytes.Length > MaximumBytes)
             throw new InvalidDataException("The profiles would exceed the 10 MB limit. This change was not saved; the existing profiles file was left untouched. Remove unneeded profiles or reduce their contents before saving.");
         AtomicFile.Write(StatePath, bytes);
+    }
+    private static void ValidatePreferences(AppState state)
+    {
+        if (state.FpsCap is < 1 or > FpsSettingsManager.UnlockedCap)
+            throw new InvalidDataException("The saved FPS cap must be between 1 and 9,999. The profiles file was preserved.");
+        if (state.GraphicsQuality is < 0 or > 10)
+            throw new InvalidDataException("The saved graphics quality must be Automatic (0) or a level from 1 to 10. The profiles file was preserved.");
     }
 }

@@ -54,9 +54,14 @@ public sealed class AppState
     public List<string> CustomRoots { get; set; } = [];
     public string? SelectedInstallationPath { get; set; }
     public bool ApplyBeforeLaunch { get; set; } = true;
+    public bool CloseAfterLaunch { get; set; }
     public bool AutoUpdate { get; set; } = true;
     public bool UnlockFps { get; set; }
+    public int FpsCap { get; set; } = FpsSettingsManager.UnlockedCap;
     public bool FpsChangePending { get; set; }
+    public int GraphicsQuality { get; set; }
+    public bool GraphicsQualityManaged { get; set; }
+    public bool GraphicsQualityChangePending { get; set; }
     public static AppState Create()
     {
         var profile = new FlagProfile { Name = "Default" };

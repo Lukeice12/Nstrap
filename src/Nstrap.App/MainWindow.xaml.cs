@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = model;
         InitializeFpsControls();
+        InitializeGraphicsQualityControls();
         SourceInitialized += (_, _) => EnableDarkTitleBar();
         Closing += OnClosing;
         Loaded += OnLoaded;
@@ -50,26 +51,34 @@ public partial class MainWindow : Window
             $"Profile: {Model.SelectedProfile.Name}. Restart the client to load these settings.");
     }
     private async void ApplyClick(object sender, RoutedEventArgs e) => await Busy(ApplySelectedAsync);
-    private async void LaunchClick(object sender, RoutedEventArgs e) => await Busy(async () =>
+    private async void LaunchClick(object sender, RoutedEventArgs e)
     {
-        var client = RequireInstallation();
-        if (!File.Exists(client.ExecutablePath))
-            throw new FileNotFoundException("The selected Roblox installation no longer exists. Refresh installations and select the current client.");
-        if (Model.ApplyBeforeLaunch) FlagValidator.Validate(Model.SelectedProfile.Flags);
-        Model.Save();
-        Model.Success($"Verifying Roblox {client.Kind}…", "Checking the selected client before closing Player sessions.");
-        await Task.Run(() => OfficialClient.VerifyPublisher(client.ExecutablePath));
-        bool alreadyRunning = client.Kind == ClientKind.Studio && OfficialClient.IsRunning(ClientKind.Studio);
-        Model.Success("Closing Roblox Player sessions…", "Waiting for Player to exit before applying settings.");
-        await Task.Run(OfficialClient.ClosePlayerClientsAsync);
-        string fpsFeedback = client.Kind == ClientKind.Player ? await ReconcileFpsAsync() : "";
-        if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
-        Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
-        await Task.Run(() => OfficialClient.Launch(client));
-        Model.Success(alreadyRunning ? $"Roblox {client.Kind} is already running." : $"Roblox {client.Kind} started.",
-            string.Join(" ", new[] { alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "", fpsFeedback }
-                .Where(message => !string.IsNullOrEmpty(message))));
-    });
+        bool launched = false;
+        await Busy(async () =>
+        {
+            var client = RequireInstallation();
+            if (!File.Exists(client.ExecutablePath))
+                throw new FileNotFoundException("The selected Roblox installation no longer exists. Refresh installations and select the current client.");
+            if (Model.ApplyBeforeLaunch) FlagValidator.Validate(Model.SelectedProfile.Flags);
+            Model.Save();
+            Model.Success($"Verifying Roblox {client.Kind}…", "Checking the selected client before closing Player sessions.");
+            await Task.Run(() => OfficialClient.VerifyPublisher(client.ExecutablePath));
+            bool alreadyRunning = client.Kind == ClientKind.Studio && OfficialClient.IsRunning(ClientKind.Studio);
+            Model.Success("Closing Roblox Player sessions…", "Waiting for Player to exit before applying settings.");
+            await Task.Run(OfficialClient.ClosePlayerClientsAsync);
+            string fpsFeedback = client.Kind == ClientKind.Player ? await ReconcileFpsAsync() : "";
+            string qualityFeedback = client.Kind == ClientKind.Player ? await ReconcileGraphicsQualityAsync() : "";
+            if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
+            Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
+            await Task.Run(() => OfficialClient.Launch(client));
+            launched = true;
+            Model.Success(alreadyRunning ? $"Roblox {client.Kind} is already running." : $"Roblox {client.Kind} started.",
+                string.Join(" ", new[] { alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "", fpsFeedback, qualityFeedback }
+                    .Where(message => !string.IsNullOrEmpty(message))));
+        });
+        // Close only after Busy's finally runs, through the existing save/cancel handler.
+        if (launched && Model.CloseAfterLaunch && !Model.IsBusy) Close();
+    }
     private async void InstallClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
         var progress = new Progress<string>(message => Model.Success(message, "Installer source: setup.rbxcdn.com"));
@@ -286,6 +295,7 @@ public partial class MainWindow : Window
     {
         if (await StartupUpdatesAsync()) return;
         if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
+        if (Model.GraphicsQualityChangePending) await Busy(async () => { await ReconcileGraphicsQualityAsync(); });
     }
     private void EnableDarkTitleBar()
     {
