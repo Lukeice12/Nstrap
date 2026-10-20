@@ -14,6 +14,7 @@ public partial class JsonEditorWindow : Window
     private int _activeMatch = -1;
 
     public IReadOnlyList<FlagEntry>? ImportedFlags { get; private set; }
+    public string ImportNotice { get; private set; } = "";
     public JsonEditorWindow(FlagProfile profile)
     {
         InitializeComponent();
@@ -166,10 +167,14 @@ public partial class JsonEditorWindow : Window
 
     private void Error(Exception ex) { Feedback.Foreground = new SolidColorBrush(Color.FromRgb(255, 166, 145)); Feedback.Text = ex.Message; }
     private List<FlagEntry> Validate()
+        => ShowValidation(FlagValidator.ParseImport(Editor.Text));
+
+    private List<FlagEntry> ShowValidation(FlagImportDocument document)
     {
-        var flags = FlagValidator.Import(Editor.Text);
+        var flags = document.Flags;
+        ImportNotice = document.Notice;
         Feedback.Foreground = (Brush)FindResource("MutedBrush");
-        Feedback.Text = $"Valid JSON · {flags.Count} flags. All entries can be applied.";
+        Feedback.Text = $"Valid JSON · {flags.Count} flag{(flags.Count == 1 ? "" : "s")} · {flags.Count(flag => flag.Enabled)} enabled. {ImportNotice}".TrimEnd();
         return flags;
     }
     private void ValidateClick(object sender, RoutedEventArgs e) { try { Validate(); } catch (Exception ex) { Error(ex); } }
@@ -184,8 +189,10 @@ public partial class JsonEditorWindow : Window
         {
             var dialog = new OpenFileDialog { Title = "Import FastFlags JSON", Filter = "Flag files (*.txt;*.json)|*.txt;*.json|All files (*.*)|*.*", CheckFileExists = true };
             if (dialog.ShowDialog(this) != true) return;
-            if (new FileInfo(dialog.FileName).Length > FlagValidator.MaximumBytes) throw new InvalidDataException("The JSON file exceeds 2 MB.");
-            Editor.Text = File.ReadAllText(dialog.FileName); Validate();
+            var json = FlagFileImport.ReadText(dialog.FileName);
+            var document = FlagValidator.ParseImport(json);
+            Editor.Text = json;
+            ShowValidation(document);
         }
         catch (Exception ex) { Error(ex); }
     }
@@ -197,7 +204,7 @@ public partial class JsonEditorWindow : Window
             var dialog = new SaveFileDialog { Title = "Export FastFlags JSON", FileName = "ClientAppSettings.json", Filter = "JSON settings (*.json)|*.json", DefaultExt = ".json" };
             if (dialog.ShowDialog(this) != true) return;
             AtomicFile.Write(dialog.FileName, System.Text.Encoding.UTF8.GetBytes(FlagValidator.Export(flags)));
-            Feedback.Text = "JSON exported.";
+            Feedback.Text = $"Enabled flags exported as a flat JSON object. {ImportNotice}".TrimEnd();
         }
         catch (Exception ex) { Error(ex); }
     }

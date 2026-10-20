@@ -6,7 +6,7 @@
   <Grid Margin="26">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <StackPanel Margin="0,0,0,20"><TextBlock Text="JSON editor" FontSize="26" FontWeight="SemiBold"/>
-      <TextBlock Text="Edit or import a flat JSON object. Replace profile enables every imported entry. Export includes enabled flags only; disabled entries stay in the profile until you replace it." Style="{StaticResource Muted}" FontSize="12" Margin="0,9,0,0"/>
+      <TextBlock Text="Accepts a flag object or an array of name/value records. Record imports keep enabled states; flat objects enable every entry. This editor opens with enabled flags only. Export writes an enabled-only object; Replace profile uses exactly the entries shown." Style="{StaticResource Muted}" FontSize="12" Margin="0,9,0,0"/>
     </StackPanel>
     <Border x:Name="FindBar" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,12">
       <Grid>

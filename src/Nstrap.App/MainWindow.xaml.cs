@@ -175,7 +175,8 @@ public partial class MainWindow : Window
             while (Model.SelectedProfile.Flags.Count > 0) Model.SelectedProfile.Flags.RemoveAt(Model.SelectedProfile.Flags.Count - 1);
             foreach (var flag in flags) Model.SelectedProfile.Flags.Add(flag);
             Model.Save();
-            Model.Success($"Imported {flags.Count} flags.", "All imported entries are enabled. The previous profile entries were replaced.");
+            Model.Success($"Imported {flags.Count} flag{(flags.Count == 1 ? "" : "s")}; {flags.Count(flag => flag.Enabled)} enabled.",
+                $"The previous profile entries were replaced. {editor.ImportNotice}".TrimEnd());
         }
     });
     private static string? PickImportFile(Window owner)
@@ -238,7 +239,7 @@ public partial class MainWindow : Window
         Model.Success("Reading flag file…");
         var plan = await Task.Run(() => FlagFileImport.Read(path, snapshot));
         Model.CommitImport(plan);
-        string imported = $"{plan.ImportedCount} flag{(plan.ImportedCount == 1 ? "" : "s")}";
+        string imported = $"{plan.ImportedCount} flag{(plan.ImportedCount == 1 ? "" : "s")} ({plan.ImportedEnabledCount} enabled)";
         Model.Search = "";
         FlagsNav.IsChecked = true;
         Model.Success($"Imported {imported}. Applying profile…");
@@ -251,13 +252,13 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("Smoke imports may only apply to their isolated fixture installation.");
             var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
             Model.Success($"Imported {imported}; applied {result.ManagedCount}.",
-                $"Roblox {installation.Kind} · {Model.SelectedProfile.Name}. Restart the client to load these flags.");
+                $"Roblox {installation.Kind} · {Model.SelectedProfile.Name}. Restart the client to load these flags. {plan.Notice}".TrimEnd());
         }
         catch (Exception ex)
         {
             Model.HasError = true;
             Model.Status = $"Imported {imported}. Not applied.";
-            Model.StatusDetail = $"{ex.Message} The profile is saved; use Apply profile after resolving this.";
+            Model.StatusDetail = $"{ex.Message} The profile is saved; use Apply profile after resolving this. {plan.Notice}".TrimEnd();
         }
     });
     private void BackupsClick(object sender, RoutedEventArgs e) => Run(() => OpenFolder(Model.Applier.BackupDirectory));

@@ -154,19 +154,19 @@ static void SuppliedFileImport(string path)
 {
     using var fixture = new Fixture();
     var plan = FlagFileImport.Read(path, []);
-    var source = FlagValidator.ReadObject(File.ReadAllBytes(path));
+    var source = FlagValidator.Import(FlagFileImport.ReadText(path)).ToDictionary(flag => flag.Name, StringComparer.Ordinal);
     Equal(source.Count, plan.ImportedCount);
     foreach (var flag in plan.MergedFlags)
     {
-        var value = source[flag.Name];
-        Equal(value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText(), flag.Value);
+        Equal(source[flag.Name].Value, flag.Value);
+        Equal(source[flag.Name].Enabled, flag.Enabled);
     }
     var profile = new FlagProfile { Name = "External sample fixture", Flags = new(plan.MergedFlags) };
     var installation = fixture.Installation("isolated-sample", ClientKind.Player);
     var applier = new SettingsApplier(fixture.Path("data"));
     var result = applier.Apply(installation, profile);
-    Equal(source.Count, result.ManagedCount);
-    var actual = ReadSettings(installation.ConfigPath);
+    Equal(source.Values.Count(flag => flag.Enabled), result.ManagedCount);
+    var actual = File.Exists(installation.ConfigPath) ? ReadSettings(installation.ConfigPath) : new Dictionary<string, JsonElement>();
     foreach (var (name, expected) in FlagValidator.Validate(plan.MergedFlags))
         Check(JsonElement.DeepEquals(expected, actual[name]), $"Value was not preserved for {name}");
     applier.Restore(installation);

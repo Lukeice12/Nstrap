@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.5/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.6/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
@@ -30,9 +30,11 @@ Roblox decides which flags its clients honor. The app includes informational lab
 3. File import merges into the selected profile and immediately attempts to apply it to the selected installation. You can also choose **Apply profile** or **Launch Roblox**. Launch closes all running Roblox Player sessions in your current Windows session before applying settings and starting the selected client. Studio stays open. Applying before launch is enabled by default; using **Apply profile** alone still requires restarting a running client to load the saved flags.
 4. Use **Recovery → Restore previous values** to undo N strap's managed changes.
 
-Edits save automatically. File import enables imported entries and replaces values for matching names; other profile entries are retained. The whole file is validated before importing. If automatic application cannot finish, the imported profile stays saved and the app reports what needs attention.
+Edits save automatically. File import replaces values and enabled states for matching names; other profile entries are retained. The whole file is validated before importing. If automatic application cannot finish, the imported profile stays saved and the app reports what needs attention.
 
-Exported JSON includes enabled flags. **Replace profile** inside the JSON editor replaces the profile's entries and enables the imported flags. Presets merge into the selected profile when chosen.
+Import accepts both a flat JSON flag map, such as `{"FFlagExample": true}`, and an array of records, such as `[{"name": "FFlagExample", "value": "True", "type": "bool", "enabled": true}]`. Flat maps enable all imported flags. Record arrays preserve each entry's `enabled` state, defaulting to enabled when it is omitted. Key bindings and cycling settings from other applications are not imported; N strap imports the listed flag values.
+
+Exported JSON remains a flat map containing enabled flags. **Replace profile** inside the JSON editor accepts the same import formats and replaces the profile's entries. Presets merge into the selected profile when chosen.
 
 In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
 
