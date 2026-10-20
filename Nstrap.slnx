@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Nstrap.Core/Nstrap.Core.csproj" />
+    <Project Path="src/Nstrap.App/Nstrap.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Nstrap.Checks/Nstrap.Checks.csproj" />
+  </Folder>
+</Solution>

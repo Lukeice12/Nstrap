@@ -1,0 +1,231 @@
+<Window x:Class="Nstrap.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="N strap" Width="1240" Height="900" MinWidth="1000" MinHeight="700" Style="{StaticResource {x:Type Window}}"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <Style x:Key="NavButton" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+      <Setter Property="Padding" Value="16,13"/>
+      <Setter Property="Margin" Value="0,0,0,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="GroupName" Value="Navigation"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+        <Border x:Name="NavChrome" Background="Transparent" CornerRadius="9" Padding="{TemplateBinding Padding}">
+          <ContentPresenter/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="NavChrome" Property="Background" Value="#29243D"/><Setter Property="Foreground" Value="{StaticResource AccentBrush}"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavChrome" Property="Opacity" Value=".7"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="NavChrome" Property="BorderThickness" Value="1"/><Setter TargetName="NavChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="TabItem">
+      <Setter Property="Visibility" Value="Collapsed"/>
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+    </Style>
+  </Window.Resources>
+  <Grid Background="{StaticResource CanvasBrush}">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="215"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border Background="#10141D" BorderBrush="#222A38" BorderThickness="0,0,1,0">
+      <Grid Margin="18,30,18,24">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="10,0,0,42">
+          <Border Width="40" Height="40" Background="{StaticResource AccentBrush}" CornerRadius="11">
+            <Path Data="M 11,29 L 11,11 L 16,11 L 25,23 L 25,11 L 30,11 L 30,29 L 25,29 L 16,17 L 16,29 Z" Fill="#19132F" Stretch="None"/>
+          </Border>
+          <StackPanel Margin="12,-1,0,0"><TextBlock Text="N strap" FontSize="23" FontWeight="SemiBold"/><TextBlock Text="YOUR CLIENT. YOUR WAY." FontSize="8" Foreground="{StaticResource MutedBrush}" Margin="1,2,0,0"/></StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="1">
+          <TextBlock Text="WORKSPACE" Style="{StaticResource Eyebrow}" Foreground="#65738C" Margin="16,0,0,16"/>
+          <RadioButton x:Name="HomeNav" Style="{StaticResource NavButton}" IsChecked="True" Tag="0" Checked="Navigate">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Overview" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="FlagsNav" Style="{StaticResource NavButton}" Tag="1" Checked="Navigate">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="FastFlags" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="PresetsNav" Style="{StaticResource NavButton}" Tag="2" Checked="Navigate">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Presets" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="RecoveryNav" Style="{StaticResource NavButton}" Tag="3" Checked="Navigate">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Recovery" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="SettingsNav" Style="{StaticResource NavButton}" Tag="4" Checked="Navigate">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="About &amp; settings" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
+          </RadioButton>
+        </StackPanel>
+        <Border Grid.Row="3" Background="#191F2C" CornerRadius="10" Padding="15">
+          <StackPanel><StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="{StaticResource MintBrush}" Margin="0,0,7,0"/><TextBlock Text="Local by design" FontWeight="SemiBold" FontSize="12"/></StackPanel>
+            <TextBlock Text="No account. No telemetry." Style="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0"/>
+            <TextBlock Text="N STRAP   /   0.1.0" FontSize="10" Foreground="#67758D" Margin="0,13,0,0"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <TabControl x:Name="Pages" SelectedIndex="{Binding Page}" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextBrush}" Padding="0" IsEnabled="{Binding IsIdle}">
+        <TabControl.Template><ControlTemplate TargetType="TabControl"><ContentPresenter ContentSource="SelectedContent"/></ControlTemplate></TabControl.Template>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="36,31,36,28">
+              <DockPanel><Border DockPanel.Dock="Right" VerticalAlignment="Center" CornerRadius="12" BorderBrush="#354336" BorderThickness="1" Background="#17271F" Padding="11,5"><TextBlock Text="PERSONAL WORKSPACE" Foreground="{StaticResource MintBrush}" FontSize="10" FontWeight="SemiBold"/></Border>
+                <StackPanel><TextBlock Text="Overview" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="A little more control. A lot less friction." Style="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
+              </DockPanel>
+              <Border CornerRadius="16" Padding="28" Margin="0,28,0,20" BorderThickness="1" BorderBrush="#413759">
+                <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#302743" Offset="0"/><GradientStop Color="#181D2D" Offset="1"/></LinearGradientBrush></Border.Background>
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="130"/></Grid.ColumnDefinitions>
+                  <StackPanel><TextBlock Text="READY FOR YOUR NEXT SESSION" Style="{StaticResource Eyebrow}"/><TextBlock Text="Make room for play." FontSize="34" FontWeight="SemiBold" Margin="0,13,0,10"/>
+                    <TextBlock Text="Choose your client, shape your settings, and jump in." Foreground="#C4BCD4" TextWrapping="Wrap" Margin="0,0,0,24"/>
+                    <WrapPanel><Button Content="Launch Roblox   ↗" Style="{StaticResource Primary}" Click="LaunchClick" Padding="21,12" Margin="0,0,10,0"/><Button Content="Apply profile" Click="ApplyClick" Padding="21,12"/></WrapPanel>
+                  </StackPanel>
+                  <Viewbox Grid.Column="1" Width="110" Height="110" Opacity=".85">
+                    <Canvas Width="100" Height="100"><Path Data="M 10,78 L 10,22 L 26,22 L 62,65 L 62,22 L 78,22 L 78,78 L 62,78 L 26,35 L 26,78 Z" Fill="#AA93EA"/><Path Data="M 84,22 L 91,22 L 91,78 L 84,78 Z" Fill="#99D7C5"/></Canvas>
+                  </Viewbox>
+                </Grid>
+              </Border>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}"><StackPanel>
+                  <TextBlock Text="ACTIVE PROFILE" Style="{StaticResource Eyebrow}"/>
+                  <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" Margin="0,16,0,12"/>
+                  <TextBlock Text="{Binding FlagSummary}" Style="{StaticResource Muted}"/>
+                  <Button Content="Manage FastFlags   →" HorizontalAlignment="Left" Style="{StaticResource Quiet}" Padding="0,15,0,0" Click="GoFlags"/>
+                </StackPanel></Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel>
+                  <TextBlock Text="CLIENT STATUS" Style="{StaticResource Eyebrow}"/>
+                  <TextBlock Text="{Binding ClientTitle}" FontSize="21" FontWeight="SemiBold" Margin="0,17,0,10"/>
+                  <TextBlock Text="{Binding ClientDetail}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding ClientPath}"/>
+                  <Button Content="Refresh installations   ↻" HorizontalAlignment="Left" Style="{StaticResource Quiet}" Padding="0,15,0,0" Click="RefreshClick"/>
+                </StackPanel></Border>
+              </Grid>
+              <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <StackPanel><DockPanel><TextBlock Text="Your installation" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallationSummary}" Style="{StaticResource Muted}" HorizontalAlignment="Right"/></DockPanel>
+                  <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <ComboBox ItemsSource="{Binding Installations}" SelectedItem="{Binding SelectedInstallation}" DisplayMemberPath="DisplayName" ToolTip="{Binding ClientPath}"/>
+                    <Button Grid.Column="1" Content="Choose folder" Click="ChooseFolderClick" Margin="10,0,0,0"/>
+                  </Grid>
+                  <TextBlock Text="{Binding ClientPath}" Foreground="#697A94" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,10,0,18" ToolTip="{Binding ClientPath}"/>
+                  <WrapPanel><Button Content="Install / update Player" Click="InstallClick" Margin="0,0,10,0"/><Button Content="Get Studio   ↗" Style="{StaticResource Quiet}" Click="GetStudioClick"/></WrapPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+        <TabItem>
+          <Grid Margin="36,31,36,26">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <DockPanel><Button DockPanel.Dock="Right" Content="Apply profile" Style="{StaticResource Primary}" VerticalAlignment="Top" Click="ApplyClick"/>
+              <StackPanel><TextBlock Text="FastFlags" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Your profiles, down to the last flag." Style="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
+            </DockPanel>
+            <Border Grid.Row="1" Style="{StaticResource Card}" Padding="18" Margin="0,25,0,18">
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" MinWidth="180"/>
+                <WrapPanel Grid.Column="1" Margin="12,0,0,0"><Button Content="New" Click="NewProfileClick" Margin="0,0,6,0"/><Button Content="Duplicate" Click="DuplicateProfileClick" Margin="0,0,6,0"/><Button Content="Rename" Click="RenameProfileClick" Margin="0,0,6,0"/><Button Content="Delete" Style="{StaticResource Quiet}" Click="DeleteProfileClick"/></WrapPanel>
+              </Grid>
+            </Border>
+            <Grid Grid.Row="2" Margin="0,0,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Grid Margin="0,0,14,0"><TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search flags by name" AutomationProperties.Name="Search flags"/>
+                <TextBlock Text="Search flags…" IsHitTestVisible="False" Foreground="#71809A" Margin="12,0" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Search}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+              </Grid>
+              <WrapPanel Grid.Column="1"><Button Content="+ Add flag" Click="AddFlagClick" Margin="0,0,8,0"/><Button Content="{}{ }  JSON editor" Click="JsonClick" Margin="0,0,8,0"/><Button Content="Remove" Click="RemoveFlagClick"/></WrapPanel>
+            </Grid>
+            <Border Grid.Row="3" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True" Background="{StaticResource SurfaceBrush}">
+              <Grid>
+                <DataGrid x:Name="FlagsGrid" ItemsSource="{Binding FlagsView}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False"
+                          Background="Transparent" Foreground="{StaticResource TextBrush}" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#242D3D"
+                          RowHeaderWidth="0" HeadersVisibility="Column" RowHeight="58" SelectionMode="Single" SelectionUnit="FullRow" EnableRowVirtualization="True">
+                  <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#191F2C"/><Setter Property="Foreground" Value="#8797B2"/><Setter Property="FontSize" Value="10"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="12,14"/><Setter Property="BorderThickness" Value="0"/></Style>
+                    <Style TargetType="DataGridRow"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#25283B"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#1E2635"/></Trigger></Style.Triggers></Style>
+                    <Style TargetType="DataGridCell"><Setter Property="BorderThickness" Value="0"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="Transparent"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="Padding" Value="7,7"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Background" Value="Transparent"/><Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/><Setter Property="FontSize" Value="12"/></Style>
+                  </DataGrid.Resources>
+                  <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="ON" Width="49"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0" AutomationProperties.Name="Flag enabled"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="FLAG NAME" Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Name}" AutomationProperties.Name="Flag name"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="VALUE" Width="105"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding TypeHint}" AutomationProperties.Name="Flag value"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="SUPPORT" Width="172"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Support}" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="8,0" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding EmptyFlags, Converter={StaticResource BoolVisibility}}" IsHitTestVisible="False" Margin="24">
+                  <TextBlock Text="{}{ }" Foreground="{StaticResource AccentBrush}" FontFamily="Consolas" FontSize="40" HorizontalAlignment="Center"/>
+                  <TextBlock Text="Start with a clean slate." FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,8"/>
+                  <TextBlock Text="Add a flag, paste JSON, or pick a preset." Style="{StaticResource Muted}" TextAlignment="Center"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+            <StackPanel Grid.Row="4" Margin="0,15,0,0"><DockPanel><TextBlock Text="{Binding FlagSummary}" Foreground="{StaticResource MintBrush}" FontSize="12"/><TextBlock Text="Drafts save automatically" Foreground="{StaticResource MutedBrush}" FontSize="12" HorizontalAlignment="Right"/></DockPanel>
+              <TextBlock Text="All valid flags can be applied. Support labels describe Roblox Player's published allowlist; Studio has no local allowlist. Actual behavior depends on Roblox." Style="{StaticResource Muted}" FontSize="11" Margin="0,10,0,0"/>
+            </StackPanel>
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
+            <TextBlock Text="A useful starting point." FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock Text="Small, readable presets. Every flag stays yours to edit." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+            <Border Background="#1D2630" CornerRadius="10" Padding="16" Margin="0,25,0,22"><TextBlock Text="Presets merge into your selected profile and enable their flags. Apply the profile when you are ready. These are configuration requests, not measured performance promises." Style="{StaticResource Muted}"/></Border>
+            <ItemsControl ItemsSource="{Binding Presets}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border Style="{StaticResource Card}" Width="350" Margin="0,0,16,16" Padding="22">
+                  <StackPanel><TextBlock Text="{Binding Category}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding Name}" FontSize="22" FontWeight="SemiBold" Margin="0,12,0,10"/>
+                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" LineHeight="21" MinHeight="43"/>
+                    <TextBlock Text="{Binding Caveat}" Style="{StaticResource Muted}" FontSize="12" Margin="0,14,0,22" MinHeight="63"/>
+                    <Button Content="Add to profile   +" Click="PresetClick" HorizontalAlignment="Left" Tag="{Binding}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel></ScrollViewer>
+        </TabItem>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
+            <TextBlock Text="A way back, built in." FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock Text="Settings changes should be easy to undo." Style="{StaticResource Muted}" Margin="0,6,0,28"/>
+            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Restore managed settings" FontSize="22" FontWeight="SemiBold"/>
+              <TextBlock Text="Remove the flags N strap applied to the selected installation. If a flag already had a value, that original value returns. Unmanaged settings are preserved." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
+              <ComboBox ItemsSource="{Binding Installations}" SelectedItem="{Binding SelectedInstallation}" DisplayMemberPath="DisplayName" Margin="0,0,0,20"/>
+              <Button Content="Restore previous values" HorizontalAlignment="Left" Click="RestoreClick"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Your backups" FontSize="22" FontWeight="SemiBold"/>
+              <TextBlock Text="Before changing an existing ClientAppSettings.json, N strap saves a complete timestamped copy. Backups and recovery records stay on your computer." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
+              <Button Content="Open backups folder   ↗" HorizontalAlignment="Left" Click="BackupsClick"/>
+            </StackPanel></Border>
+            <Border Background="#1C2430" CornerRadius="10" Padding="20" Margin="0,20,0,0"><StackPanel>
+              <TextBlock Text="Outside edits are respected" Foreground="{StaticResource MintBrush}" FontWeight="SemiBold"/>
+              <TextBlock Text="If another tool changes a managed flag, N strap pauses the write and explains the conflict. Original values and full backups remain available for review." Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+            </StackPanel></Border>
+          </StackPanel></ScrollViewer>
+        </TabItem>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
+            <TextBlock Text="Thoughtfully simple." FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock Text="An independent home for your Roblox configuration." Style="{StaticResource Muted}" Margin="0,6,0,28"/>
+            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Launch behavior" FontSize="21" FontWeight="SemiBold"/>
+              <CheckBox Content="Apply the selected profile before launching" IsChecked="{Binding ApplyBeforeLaunch}" Margin="0,21,0,10"/>
+              <TextBlock Text="Close the selected Roblox client before applying flags. Updates can replace installation folders; refresh and apply to the new version." Style="{StaticResource Muted}" FontSize="12" Margin="0,10,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Stored on your device" FontSize="21" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource Muted}" FontSize="12" Margin="0,14,0,18"/>
+              <Button Content="Open data folder   ↗" Click="DataFolderClick" HorizontalAlignment="Left"/>
+              <TextBlock Text="No telemetry, credentials, background service, or protocol takeover. Installer downloads come from Roblox over HTTPS and must pass Windows signature and publisher verification." Style="{StaticResource Muted}" FontSize="12" Margin="0,20,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="N strap  0.1.0" FontSize="21" FontWeight="SemiBold"/>
+              <TextBlock Text="An original, independent Windows launcher. N strap is not affiliated with or endorsed by Roblox Corporation. Roblox controls which local flags its clients honor." Style="{StaticResource Muted}" Margin="0,14,0,18"/>
+              <WrapPanel><Button Content="Roblox flag documentation   ↗" Click="DocsClick" Margin="0,0,12,0"/><Button Content="Roblox support   ↗" Style="{StaticResource Quiet}" Click="SupportClick"/></WrapPanel>
+              <TextBlock Text="{Binding CatalogDate, StringFormat=Support catalog checked {0}}" Foreground="#6E7D94" FontSize="11" Margin="0,15,0,0"/>
+            </StackPanel></Border>
+          </StackPanel></ScrollViewer>
+        </TabItem>
+      </TabControl>
+      <Border Grid.Row="1" Background="#131923" BorderBrush="#252D3D" BorderThickness="0,1,0,0" Padding="24,14" MinHeight="70">
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
+          <Ellipse Width="6" Height="6" VerticalAlignment="Top" Margin="0,7,0,0"><Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Fill" Value="{StaticResource MintBrush}"/><Style.Triggers><DataTrigger Binding="{Binding HasError}" Value="True"><Setter Property="Fill" Value="#FFA691"/></DataTrigger></Style.Triggers></Style></Ellipse.Style></Ellipse>
+          <StackPanel Grid.Column="1"><TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/><TextBlock Text="{Binding StatusDetail}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="70"/></StackPanel>
+          <ProgressBar Grid.Column="2" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolVisibility}}" Height="3" Background="#293044" Foreground="{StaticResource AccentBrush}" Margin="15,0,0,0"/>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

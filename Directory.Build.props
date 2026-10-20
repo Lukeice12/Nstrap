@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <Version>0.1.0</Version>
+    <Authors>N strap contributors</Authors>
+    <Product>N strap</Product>
+    <Copyright>Copyright © 2026 N strap contributors</Copyright>
+  </PropertyGroup>
+</Project>
