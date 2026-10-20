@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.4/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.5/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
@@ -27,7 +27,7 @@ Roblox decides which flags its clients honor. The app includes informational lab
 
 1. In **Overview**, select a detected Player or Studio installation. Use **Install / update Player** if Player is missing.
 2. In **FastFlags**, create a profile and add flags individually, click **Import**, or drop a `.txt` or `.json` flag file onto the window. Profiles start empty.
-3. File import merges into the selected profile and immediately attempts to apply it to the selected installation. You can also choose **Apply profile** or **Launch Roblox**. If Roblox is already running, restart it to load the saved flags. Applying before launch is enabled by default.
+3. File import merges into the selected profile and immediately attempts to apply it to the selected installation. You can also choose **Apply profile** or **Launch Roblox**. Launch closes all running Roblox Player sessions in your current Windows session before applying settings and starting the selected client. Studio stays open. Applying before launch is enabled by default; using **Apply profile** alone still requires restarting a running client to load the saved flags.
 4. Use **Recovery → Restore previous values** to undo N strap's managed changes.
 
 Edits save automatically. File import enables imported entries and replaces values for matching names; other profile entries are retained. The whole file is validated before importing. If automatic application cannot finish, the imported profile stays saved and the app reports what needs attention.
@@ -84,7 +84,7 @@ You can review the complete application source and build it yourself. Installati
 
 Roblox accounts and game authentication stay with the official Roblox software. This first version uses Roblox's official installation and update process. It does not replace Roblox's binary updater or register itself as the system's Roblox browser protocol handler.
 
-Roblox loads these settings at startup. Applying or restoring flags saves the settings file; restart an already-running client to load the changes. Profiles and recovery information are stored locally. Removing a managed flag restores its recorded original value; conflicting external changes are reported rather than silently replaced.
+Roblox loads these settings at startup. Applying a profile uses its enabled flag values. If a managed flag was changed elsewhere, its current value is saved as the new restore value before the profile's value is written. Removing a managed flag restores its recorded original value if it still matches what N strap wrote; a newer external value is left alone. Unrelated settings are preserved. Recovery's **Restore previous values** reports conflicts instead of replacing externally changed values. Settings backups and interrupted-write checks remain in place.
 
 App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `backups` holds previous settings files, and `recovery` holds ownership and interrupted-operation records. Keep the recovery records if you want N strap to restore values it previously changed.
 

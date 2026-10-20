@@ -106,18 +106,17 @@ public partial class MainWindow
             RequireSmoke(savedSettings.SequenceEqual(File.ReadAllBytes(installation.ConfigPath)), "Stale-client import changed settings.");
             File.WriteAllBytes(executable, []);
 
-            // External managed edits still block automatic apply while retaining imported data.
+            // Explicit import/apply uses profile values and records external edits for restore.
             var edited = FlagValidator.ReadObject(savedSettings);
             edited["FLogSmokeLevel"] = JsonSerializer.SerializeToElement(99);
             AtomicFile.WriteJson(installation.ConfigPath, edited);
-            var externalBytes = File.ReadAllBytes(installation.ConfigPath);
             File.WriteAllText(fixture, """{"FIntSmokeConflict":"14"}""");
             ImportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await _activeImport;
-            RequireSmoke(Model.HasError && Model.Status.Contains("Not applied.", StringComparison.Ordinal), "External conflict reported a false apply success.");
-            RequireSmoke(externalBytes.SequenceEqual(File.ReadAllBytes(installation.ConfigPath)), "Import overwrote an external managed edit.");
-            AtomicFile.Write(installation.ConfigPath, savedSettings);
+            RequireSmoke(!Model.HasError && Model.Status.Contains("applied", StringComparison.Ordinal), "Import failed to reconcile an external managed edit.");
+            RequireSmoke(FlagValidator.ReadObject(File.ReadAllBytes(installation.ConfigPath))["FLogSmokeLevel"].GetInt32() == 7, "Import did not use the selected profile value.");
             Model.Applier.Restore(installation);
+            RequireSmoke(FlagValidator.ReadObject(File.ReadAllBytes(installation.ConfigPath))["FLogSmokeLevel"].GetInt32() == 99, "Restore lost the external baseline adopted by import.");
 
             if (Application.Current is App { SmokeImportFile: { } samplePath })
             {
@@ -138,7 +137,7 @@ public partial class MainWindow
             profile.Flags[0].Enabled = false;
             RequireSmoke(Model.FlagCounter.EndsWith($"{profile.Flags.Count - 1} enabled", StringComparison.Ordinal), "Footer did not update after a toggle.");
             File.WriteAllText(capturePath + ".import.txt",
-                $"PASS: Import button event; routed drag/drop over a flag TextBox; cue; busy/multiple rejection; validated merge; auto-apply; malformed file no mutation; missing/stale client and external conflict retain import without false success; counter updates. Supplied sample: {sampleCount} flags. All writes targeted isolated fixture files.");
+                $"PASS: Import button event; routed drag/drop over a flag TextBox; cue; busy/multiple rejection; validated merge; auto-apply; malformed file no mutation; missing/stale client retain import without false success; external edits reconciled and restored as the new baseline; counter updates. Supplied sample: {sampleCount} flags. All writes targeted isolated fixture files.");
         }
         finally
         {

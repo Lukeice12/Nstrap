@@ -38,12 +38,12 @@ public sealed class SettingsApplier(string dataDirectory)
     {
         var desired = FlagValidator.Validate(profile.Flags);
         EnsureInstallationExists(installation);
-        return Change(installation.ConfigPath, desired, profile.Name);
+        return Change(installation.ConfigPath, desired, profile.Name, reapplyProfile: true);
     }
     public ApplyResult Restore(RobloxInstallation installation)
     {
         EnsureInstallationExists(installation);
-        return Change(installation.ConfigPath, new(StringComparer.Ordinal), "");
+        return Change(installation.ConfigPath, new(StringComparer.Ordinal), "", reapplyProfile: false);
     }
     private static void EnsureInstallationExists(RobloxInstallation installation)
     {
@@ -51,7 +51,7 @@ public sealed class SettingsApplier(string dataDirectory)
             throw new IOException("The selected Roblox installation no longer exists. Refresh installations, select the current client, and apply again.");
     }
 
-    private ApplyResult Change(string target, Dictionary<string, JsonElement> desired, string profileName)
+    private ApplyResult Change(string target, Dictionary<string, JsonElement> desired, string profileName, bool reapplyProfile)
     {
         target = Path.GetFullPath(target);
         CheckPath(target);
@@ -71,21 +71,28 @@ public sealed class SettingsApplier(string dataDirectory)
         if (previous.Managed.Count == 0) previous.OriginalFileExisted = currentBytes is not null;
         if (previous.Managed.Count == 0 && desired.Count == 0) return new(0, null, target);
 
-        // Check every owned value before making changes. An external edit is never silently discarded.
+        // Explicit application uses the profile's desired values. Changed owned values
+        // become fresh restore baselines; restoration itself remains conflict-protected.
+        var externalChanges = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (name, managed) in previous.Managed)
         {
             if (!values.TryGetValue(name, out var current) || !Same(current, managed.Applied))
-                throw new InvalidDataException($"“{name}” was changed outside N strap. Restore that flag to its last applied value or inspect the backup before applying again. No settings were changed.");
+            {
+                if (!reapplyProfile)
+                    throw new InvalidDataException($"“{name}” was changed outside N strap. Restore stopped to keep that edit. Apply a profile to use its enabled values and record the current values for restoration, or inspect the backup. No settings were changed.");
+                externalChanges.Add(name);
+            }
         }
 
         var next = new ApplyManifest
         {
-            TargetPath = target, OriginalFileExisted = previous.OriginalFileExisted,
+            TargetPath = target,
+            OriginalFileExisted = externalChanges.Count > 0 ? currentBytes is not null : previous.OriginalFileExisted,
             AppliedAt = DateTimeOffset.UtcNow, ProfileName = profileName
         };
         foreach (var (name, managed) in previous.Managed)
         {
-            if (!desired.ContainsKey(name))
+            if (!desired.ContainsKey(name) && !externalChanges.Contains(name))
             {
                 if (managed.Original is { } original) values[name] = original;
                 else if (managed.OriginalExisted) values[name] = JsonSerializer.SerializeToElement<object?>(null);
@@ -94,11 +101,12 @@ public sealed class SettingsApplier(string dataDirectory)
         }
         foreach (var (name, value) in desired)
         {
-            JsonElement? original = previous.Managed.TryGetValue(name, out var old)
-                ? old.Original
+            bool retainBaseline = previous.Managed.TryGetValue(name, out var old) && !externalChanges.Contains(name);
+            JsonElement? original = retainBaseline
+                ? old!.Original
                 : values.TryGetValue(name, out var current) ? current : null;
-            bool originalExisted = old is not null
-                ? old.OriginalExisted || old.Original.HasValue
+            bool originalExisted = retainBaseline
+                ? old!.OriginalExisted || old.Original.HasValue
                 : values.ContainsKey(name);
             next.Managed.Add(name, new() { OriginalExisted = originalExisted, Original = original, Applied = value });
             values[name] = value;

@@ -10,7 +10,7 @@ var checks = new List<(string Name, Action Run)>
     ("Invalid import leaves originals unchanged", InvalidFileImport),
     ("Profile persistence", Persistence),
     ("Apply and restore owned keys", ApplyRestore),
-    ("External edit conflict", ExternalConflict),
+    ("External edit reconciliation", ExternalConflict),
     ("Missing-file restore", MissingFileRestore),
     ("Original null and no-op restoration", NullAndNoOpRestore),
     ("Interrupted operation recovery", Recovery),
@@ -211,10 +211,16 @@ static void ExternalConflict()
     applier.Apply(installation, Profile("One", ("FFlagOwned", "true")));
     const string edited = "{\"FFlagOwned\":false,\"FFlagOther\":false}";
     WriteSettings(installation.ConfigPath, edited);
-    Throws<InvalidDataException>(() => applier.Apply(installation, Profile("Two", ("FFlagOwned", "true"))));
-    Equal(edited, File.ReadAllText(installation.ConfigPath));
     Throws<InvalidDataException>(() => applier.Restore(installation));
     Equal(edited, File.ReadAllText(installation.ConfigPath));
+    applier.Apply(installation, Profile("Two", ("FFlagOwned", "true")));
+    var reapplied = ReadSettings(installation.ConfigPath);
+    Check(reapplied["FFlagOwned"].GetBoolean(), "explicit apply did not use the profile value");
+    Check(!reapplied["FFlagOther"].GetBoolean(), "explicit apply lost an unrelated edit");
+    applier.Restore(installation);
+    var restored = ReadSettings(installation.ConfigPath);
+    Check(!restored["FFlagOwned"].GetBoolean(), "restore did not keep the adopted external baseline");
+    Check(!restored["FFlagOther"].GetBoolean(), "restore lost an unrelated edit");
 }
 
 static void MissingFileRestore()

@@ -66,10 +66,13 @@
             <StackPanel Margin="36,31,36,28">
               <TextBlock Text="Overview" FontSize="28" FontWeight="SemiBold"/>
               <Border Style="{StaticResource Card}" Margin="0,26,0,20">
+                <StackPanel>
                 <DockPanel>
                   <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="20,0,0,0"><Button Content="Launch Roblox" Style="{StaticResource Primary}" Click="LaunchClick" Margin="0,0,10,0"/><Button Content="Apply profile" Click="ApplyClick"/></WrapPanel>
                   <StackPanel><TextBlock Text="Launch" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedProfileName, StringFormat=Profile: {0}}" Style="{StaticResource Muted}" Margin="0,8,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></StackPanel>
                 </DockPanel>
+                <TextBlock Text="Closes running Roblox Player sessions first." Style="{StaticResource Muted}" FontSize="12" Margin="0,12,0,0"/>
+                </StackPanel>
               </Border>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}"><StackPanel>
@@ -188,7 +191,7 @@
               <TextBlock Text="A timestamped copy of ClientAppSettings.json is saved before each change to an existing settings file." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
               <Button Content="Open backups folder   ↗" HorizontalAlignment="Left" Click="BackupsClick"/>
             </StackPanel></Border>
-            <TextBlock Text="If another tool changes a managed flag, applying or restoring stops with a conflict message. Use the backups to review the original values." Style="{StaticResource Muted}" Margin="0,20,0,0"/>
+            <TextBlock Text="Applying uses the profile's enabled values. If a managed flag changed elsewhere, its current value becomes the new restore value. Changed flags removed from the profile stay untouched. Restore stops if a managed value changed after the latest apply." Style="{StaticResource Muted}" Margin="0,20,0,0"/>
           </StackPanel></ScrollViewer>
         </TabItem>
         <TabItem>
@@ -196,7 +199,7 @@
             <TextBlock Text="About &amp; settings" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,26"/>
             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Launch behavior" FontSize="21" FontWeight="SemiBold"/>
               <CheckBox Content="Apply the selected profile before launching" IsChecked="{Binding ApplyBeforeLaunch}" Margin="0,21,0,10"/>
-              <TextBlock Text="Restart the selected Roblox client to load changed flags. Updates can replace installation folders; refresh and apply to the new version." Style="{StaticResource Muted}" FontSize="12" Margin="0,10,0,0"/>
+              <TextBlock Text="Launch closes running Roblox Player sessions before applying settings and starting the selected client. Studio sessions stay open. Updates can replace installation folders; refresh and apply to the new version." Style="{StaticResource Muted}" FontSize="12" Margin="0,10,0,0"/>
             </StackPanel></Border>
             <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Data folder" FontSize="21" FontWeight="SemiBold"/>
               <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource Muted}" FontSize="12" Margin="0,14,0,18"/>

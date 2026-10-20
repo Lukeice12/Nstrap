@@ -57,10 +57,19 @@ public partial class MainWindow : Window
     private async void ApplyClick(object sender, RoutedEventArgs e) => await Busy(ApplySelectedAsync);
     private async void LaunchClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
+        if (Application.Current is App { SmokeScreenshot: not null })
+            throw new InvalidOperationException("Smoke mode cannot close or launch Roblox clients.");
         var client = RequireInstallation();
-        bool alreadyRunning = OfficialClient.IsRunning(client.Kind);
-        string fpsFeedback = client.Kind == ClientKind.Player && (!alreadyRunning || Model.FpsChangePending)
-            ? await ReconcileFpsAsync() : "";
+        if (!File.Exists(client.ExecutablePath))
+            throw new FileNotFoundException("The selected Roblox installation no longer exists. Refresh installations and select the current client.");
+        if (Model.ApplyBeforeLaunch) FlagValidator.Validate(Model.SelectedProfile.Flags);
+        Model.Save();
+        Model.Success($"Verifying Roblox {client.Kind}…", "Checking the selected client before closing Player sessions.");
+        await Task.Run(() => OfficialClient.VerifyPublisher(client.ExecutablePath));
+        bool alreadyRunning = client.Kind == ClientKind.Studio && OfficialClient.IsRunning(ClientKind.Studio);
+        Model.Success("Closing Roblox Player sessions…", "Waiting for Player to exit before applying settings.");
+        await Task.Run(OfficialClient.ClosePlayerClientsAsync);
+        string fpsFeedback = client.Kind == ClientKind.Player ? await ReconcileFpsAsync() : "";
         if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
         Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
         await Task.Run(() => OfficialClient.Launch(client));
