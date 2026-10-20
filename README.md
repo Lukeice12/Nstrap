@@ -15,6 +15,7 @@ Get the portable Windows x64 build from this private repository's [Releases](htt
 - Launch Roblox Player or Studio from a clean desktop interface.
 - Create local FastFlag profiles, toggle individual flags, and import or export JSON.
 - Drop a `.txt` or `.json` flag file onto the window, or click **Import**, to import and apply it.
+- Toggle **Unlock FPS** to request a 9,999 FPS cap in Roblox Player and restore the previous cap when turned off.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
 - Apply profiles to an installed client with backups and recovery information.
 - Detect Roblox installations or choose an installation manually.
@@ -34,6 +35,8 @@ Edits save automatically. File import enables imported entries and replaces valu
 Exported JSON includes enabled flags. **Replace profile** inside the JSON editor replaces the profile's entries and enables the imported flags. Presets merge into the selected profile when chosen.
 
 In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
+
+**Unlock FPS** is on Overview and controls Roblox Player's global framerate setting independently of FastFlag profiles. It sets a high cap of 9,999 FPS; it cannot guarantee a particular framerate or override graphics-driver limits. If Player is running, the change waits until it closes. Keep N strap open to apply the pending change, or reopen N strap before launching Roblox. Turning the toggle off restores the recorded previous cap while preserving other Roblox settings. If the cap has since been changed elsewhere, that newer value is kept instead.
 
 ## Run from source
 
@@ -84,6 +87,8 @@ Roblox accounts and game authentication stay with the official Roblox software. 
 Roblox loads these settings at startup. Applying or restoring flags saves the settings file; restart an already-running client to load the changes. Profiles and recovery information are stored locally. Removing a managed flag restores its recorded original value; conflicting external changes are reported rather than silently replaced.
 
 App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `backups` holds previous settings files, and `recovery` holds ownership and interrupted-operation records. Keep the recovery records if you want N strap to restore values it previously changed.
+
+Unlock FPS changes the existing `FramerateCap` property in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Its settings-file backups are stored in `backups\player-fps`, with ownership and interrupted-update records in `recovery`.
 
 For an isolated UI preview, pass `--data-dir <folder> --smoke-screenshot <output.png>`. The preview checks import and apply using a temporary client fixture inside that data folder, writes screenshots, and exits. It does not change installed Roblox clients or launch Roblox. Add `--smoke-import-file <path>` to check a flag file against the same fixture.
 

@@ -37,7 +37,8 @@ public partial class App : Application
                 return;
             }
             DispatcherUnhandledException += OnUnhandledException;
-            MainWindow = new MainWindow(new MainViewModel(dataDirectory));
+            MainWindow = new MainWindow(new MainViewModel(dataDirectory,
+                SmokeScreenshot is not null ? Path.Combine(dataDirectory, "smoke-global-settings.xml") : null));
             MainWindow.Show();
         }
         catch (Exception ex)

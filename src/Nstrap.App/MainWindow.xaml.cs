@@ -23,6 +23,7 @@ public partial class MainWindow : Window
         Model = model;
         InitializeComponent();
         DataContext = model;
+        InitializeFpsControls();
         SourceInitialized += (_, _) => EnableDarkTitleBar();
         Closing += OnClosing;
         Loaded += OnLoaded;
@@ -58,11 +59,14 @@ public partial class MainWindow : Window
     {
         var client = RequireInstallation();
         bool alreadyRunning = OfficialClient.IsRunning(client.Kind);
+        string fpsFeedback = client.Kind == ClientKind.Player && (!alreadyRunning || Model.FpsChangePending)
+            ? await ReconcileFpsAsync() : "";
         if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
         Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
         await Task.Run(() => OfficialClient.Launch(client));
         Model.Success(alreadyRunning ? $"Roblox {client.Kind} is already running." : $"Roblox {client.Kind} started.",
-            alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "");
+            string.Join(" ", new[] { alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "", fpsFeedback }
+                .Where(message => !string.IsNullOrEmpty(message))));
     });
     private async void InstallClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
@@ -279,7 +283,11 @@ public partial class MainWindow : Window
     }
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (Application.Current is not App { SmokeScreenshot: { } path }) return;
+        if (Application.Current is not App { SmokeScreenshot: { } path })
+        {
+            if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
+            return;
+        }
         try
         {
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);

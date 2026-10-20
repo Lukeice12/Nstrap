@@ -86,6 +86,19 @@
                 </StackPanel></Border>
               </Grid>
               <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <CheckBox Content="Unlock FPS" FontSize="16" FontWeight="SemiBold" IsChecked="{Binding UnlockFps, Mode=OneWay}" Click="UnlockFpsClick"/>
+                    <TextBlock Text="Raises Roblox Player's cap to 9,999 FPS. Takes effect on its next start." Style="{StaticResource Muted}" FontSize="12" Margin="0,10,0,0"/>
+                    <TextBlock Text="{Binding FpsStatus}" Style="{StaticResource Muted}" FontSize="12" Margin="0,6,0,0"/>
+                  </StackPanel>
+                  <Button Grid.Column="1" Content="Retry" Click="RetryFpsClick" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding FpsChangePending}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                  </Button>
+                </Grid>
+              </Border>
+              <Border Style="{StaticResource Card}" Margin="0,20,0,0">
                 <StackPanel><DockPanel><TextBlock Text="Installation" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallationSummary}" Style="{StaticResource Muted}" HorizontalAlignment="Right"/></DockPanel>
                   <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <ComboBox ItemsSource="{Binding Installations}" SelectedItem="{Binding SelectedInstallation}" DisplayMemberPath="DisplayName" ToolTip="{Binding ClientPath}"/>

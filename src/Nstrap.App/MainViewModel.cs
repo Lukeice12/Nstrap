@@ -13,17 +13,22 @@ public sealed class MainViewModel : Observable
     private FlagProfile _selectedProfile;
     private RobloxInstallation? _selectedInstallation;
     private string _search = "", _status = "", _statusDetail = "";
+    private string _fpsStatus = "Player only. Turn off to restore the previous cap.";
     private bool _isBusy, _hasError;
     private int _page;
     public ProfileStore Store { get; }
     public SettingsApplier Applier { get; }
+    public FpsSettingsManager FpsSettings { get; }
     public AppState State { get; }
     public ObservableCollection<FlagProfile> Profiles => State.Profiles;
     public ObservableCollection<RobloxInstallation> Installations { get; } = [];
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.3";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.4";
+    public bool UnlockFps => State.UnlockFps;
+    public bool FpsChangePending => State.FpsChangePending;
+    public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
     public string CatalogDate => FlagCatalog.CheckedOn;
     public string FlagSummary => $"{SelectedProfile.Flags.Count(f => f.Enabled)} enabled · {SelectedProfile.Flags.Count} total";
     public string FlagCounter => $"{SelectedProfile.Flags.Count} flag{(SelectedProfile.Flags.Count == 1 ? "" : "s")} · {SelectedProfile.Flags.Count(f => f.Enabled)} enabled";
@@ -76,11 +81,14 @@ public sealed class MainViewModel : Observable
         }
     }
 
-    public MainViewModel(string directory)
+    public MainViewModel(string directory, string? fpsSettingsPath = null)
     {
         Store = new(directory);
         Applier = new(directory);
+        FpsSettings = new(directory, fpsSettingsPath ?? System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "GlobalBasicSettings_13.xml"));
         State = Store.Load();
+        if (State.FpsChangePending) _fpsStatus = "FPS change pending.";
         _selectedProfile = State.Profiles.FirstOrDefault(p => p.Id == State.SelectedProfileId) ?? State.Profiles[0];
         FlagsView = MakeView();
         foreach (var profile in Profiles) Observe(profile);
@@ -125,6 +133,22 @@ public sealed class MainViewModel : Observable
     }
     private void ScheduleSave() { _saveTimer.Stop(); _saveTimer.Start(); }
     public void Save() { _saveTimer.Stop(); Store.Save(State); }
+    public void QueueFpsChange(bool enabled)
+    {
+        bool oldEnabled = State.UnlockFps, oldPending = State.FpsChangePending;
+        State.UnlockFps = enabled;
+        State.FpsChangePending = true;
+        try { Save(); }
+        catch { State.UnlockFps = oldEnabled; State.FpsChangePending = oldPending; throw; }
+        finally { Changed(nameof(UnlockFps)); Changed(nameof(FpsChangePending)); }
+    }
+    public void CompleteFpsChange()
+    {
+        State.FpsChangePending = false;
+        try { Save(); }
+        catch { State.FpsChangePending = true; throw; }
+        finally { Changed(nameof(FpsChangePending)); }
+    }
     public void CommitImport(FlagImportPlan plan)
     {
         var previous = SelectedProfile.Flags.ToArray();
