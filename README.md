@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.6/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.7/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
@@ -20,6 +20,7 @@ Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/downl
 - Apply profiles to an installed client with backups and recovery information.
 - Detect Roblox installations or choose an installation manually.
 - Install or update Player through Roblox's official installer.
+- Keep N strap up to date automatically on startup, or check manually from **Updates**.
 
 Roblox decides which flags its clients honor. The app includes informational labels based on [Roblox's published documentation](https://devforum.roblox.com/t/allowlist-for-local-client-configuration-via-fast-flags/3966569). Player may ignore unlisted flags; Studio has different behavior. These labels do not restrict editing or applying flags, and they cannot guarantee that a particular flag still works.
 
@@ -39,6 +40,16 @@ Exported JSON remains a flat map containing enabled flags. **Replace profile** i
 In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
 
 **Unlock FPS** is on Overview and controls Roblox Player's global framerate setting independently of FastFlag profiles. It sets a high cap of 9,999 FPS; it cannot guarantee a particular framerate or override graphics-driver limits. If Player is running, the change waits until it closes. Keep N strap open to apply the pending change, or reopen N strap before launching Roblox. Turning the toggle off restores the recorded previous cap while preserving other Roblox settings. If the cap has since been changed elsewhere, that newer value is kept instead.
+
+## Update N strap
+
+Open **Updates** to see the installed version, change **Automatically update when N strap starts**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
+
+The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 `Nstrap.exe`, running normally from a writable local folder. Updates do not request administrator access; custom `--data-dir` and smoke modes disable the updater.
+
+Update downloads and helper files are stored in `%LOCALAPPDATA%\Nstrap\updates`. Replacement keeps a backup of the previous executable beside `Nstrap.exe` while startup is confirmed. An incomplete installation pauses automatic retries for that version; the Updates tab lets you retry manually.
+
+Versions before **0.1.7** need a one-time manual upgrade: close N strap, download and extract the current ZIP, and run the new `Nstrap.exe`.
 
 ## Run from source
 

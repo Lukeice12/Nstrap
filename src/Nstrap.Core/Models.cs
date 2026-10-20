@@ -54,6 +54,7 @@ public sealed class AppState
     public List<string> CustomRoots { get; set; } = [];
     public string? SelectedInstallationPath { get; set; }
     public bool ApplyBeforeLaunch { get; set; } = true;
+    public bool AutoUpdate { get; set; } = true;
     public bool UnlockFps { get; set; }
     public bool FpsChangePending { get; set; }
     public static AppState Create()

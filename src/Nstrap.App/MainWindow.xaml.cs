@@ -23,6 +23,8 @@ public partial class MainWindow : Window
         Model = model;
         InitializeComponent();
         DataContext = model;
+        Model.UpdatesAllowed = Application.Current is App { UpdatesAllowed: true };
+        if (!Model.UpdatesAllowed) Model.UpdateStatus = "Updates are disabled for custom data folders and smoke mode.";
         InitializeFpsControls();
         SourceInitialized += (_, _) => EnableDarkTitleBar();
         Closing += OnClosing;
@@ -282,6 +284,7 @@ public partial class MainWindow : Window
     }
     private void OnClosing(object? sender, CancelEventArgs e)
     {
+        if (_updateHandoff) return;
         if (Model.IsBusy) { e.Cancel = true; Model.Success("An operation is still in progress.", "Wait for it to finish before closing N strap."); return; }
         try { Model.Save(); }
         catch (Exception ex)
@@ -295,6 +298,7 @@ public partial class MainWindow : Window
     {
         if (Application.Current is not App { SmokeScreenshot: { } path })
         {
+            if (await StartupUpdatesAsync()) return;
             if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
             return;
         }
