@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Get the portable Windows x64 build from this private repository's [Releases](https://github.com/Lukeice12/Nstrap/releases). Extract the ZIP and run `Nstrap.exe`. The portable build includes the .NET runtime; no SDK is needed to run it. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.4/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
