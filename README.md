@@ -1,6 +1,6 @@
 # N strap
 
-A personal Windows launcher and FastFlag manager for Roblox Player and Studio. Built in C# with a native WPF interface.
+A Windows launcher and FastFlag manager for Roblox. Built in C# with a native WPF interface.
 
 N strap is an original implementation. Its application code uses .NET and Windows APIs, with no third-party runtime NuGet packages, telemetry, Roblox login, or credential collection.
 
@@ -92,4 +92,4 @@ Unlock FPS changes the existing `FramerateCap` property in `%LOCALAPPDATA%\Roblo
 
 For an isolated UI preview, pass `--data-dir <folder> --smoke-screenshot <output.png>`. The preview checks import and apply using a temporary client fixture inside that data folder, writes screenshots, and exits. It does not change installed Roblox clients or launch Roblox. Add `--smoke-import-file <path>` to check a flag file against the same fixture.
 
-N strap is an independent personal project and is not affiliated with Roblox.
+N strap is an independent project and is not affiliated with Roblox.
