@@ -5,7 +5,7 @@ using Nstrap.Core;
 
 namespace Nstrap.App.Services;
 
-public enum EmergencyHotkey { KillSwitch, Nuke }
+public enum EmergencyHotkey { KillSwitch, Nuke, ShowHide }
 
 /// <summary>
 /// Owns registrations and their message queue independently of WPF's dispatcher.
@@ -49,15 +49,17 @@ public sealed class GlobalHotkeys : IDisposable
         _ready.Task.GetAwaiter().GetResult();
     }
 
-    public void Apply(HotkeyBinding? killSwitch, HotkeyBinding? nuke, Action persist)
+    public void Apply(HotkeyBinding? killSwitch, HotkeyBinding? nuke, HotkeyBinding? showHide, Action persist)
     {
         killSwitch?.Validate();
         nuke?.Validate();
-        if (killSwitch is not null && killSwitch == nuke)
-            throw new InvalidOperationException("Choose different shortcuts for Kill switch and Nuke.");
+        showHide?.Validate();
+        var bindings = new[] { killSwitch, nuke, showHide }.Where(binding => binding is not null).ToArray();
+        if (bindings.Distinct().Count() != bindings.Length)
+            throw new InvalidOperationException("Choose a different shortcut for each action.");
         lock (_configurationLock)
         {
-            Invoke(() => Stage(killSwitch, nuke));
+            Invoke(() => Stage(killSwitch, nuke, showHide));
             try { persist(); }
             catch
             {
@@ -74,7 +76,7 @@ public sealed class GlobalHotkeys : IDisposable
         GateUntilKeysReleased();
     });
 
-    private void Stage(HotkeyBinding? killSwitch, HotkeyBinding? nuke)
+    private void Stage(HotkeyBinding? killSwitch, HotkeyBinding? nuke, HotkeyBinding? showHide)
     {
         if (_staged is not null) throw new InvalidOperationException("A shortcut change is already in progress.");
         _staged = [];
@@ -82,6 +84,7 @@ public sealed class GlobalHotkeys : IDisposable
         {
             Reserve(EmergencyHotkey.KillSwitch, killSwitch);
             Reserve(EmergencyHotkey.Nuke, nuke);
+            Reserve(EmergencyHotkey.ShowHide, showHide);
         }
         catch { Rollback(); throw; }
     }

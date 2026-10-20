@@ -21,6 +21,7 @@ internal sealed class UpdateJob
     public string OldHash { get; set; } = "";
     public string NewHash { get; set; } = "";
     public bool RestartGuardRequired { get; set; }
+    public bool? StartHidden { get; set; }
 }
 
 internal sealed class UpdateStatus
@@ -199,8 +200,10 @@ internal static class UpdateHandoff
     private static string Backup(UpdateJob job, UpdateTicket ticket) =>
         Path.Combine(Path.GetDirectoryName(job.Target)!, $".nstrap-backup-{ticket.Id}.exe");
 
-    public static async Task<UpdateTicket> PrepareAsync(AppRelease release, IProgress<string> progress)
+    public static async Task<UpdateTicket> PrepareAsync(AppRelease release, IProgress<string> progress,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         RequireInstallable();
         if (release.Version <= GitHubUpdates.CurrentVersion) throw new IOException("An update cannot replace N strap with the same or an older version.");
         // Check write access before a large download. No request for elevation.
@@ -230,14 +233,22 @@ internal static class UpdateHandoff
                 OldHash = Hash(Environment.ProcessPath!), RestartGuardRequired = true
             };
             progress.Report("Downloading update...");
-            await GitHubUpdates.DownloadAsync(release, directory, progress);
+            await GitHubUpdates.DownloadAsync(release, directory, progress, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             job.NewHash = Hash(Path.Combine(directory, "update.exe"));
+            cancellationToken.ThrowIfCancellationRequested();
             File.Copy(job.Target, Path.Combine(directory, HelperName), false);
             ProtectHelperFile(Path.Combine(directory, HelperName));
             if (!HashMatches(Path.Combine(directory, HelperName), job.OldHash))
                 throw new IOException("N strap changed while the update was being prepared. Restart it and try again.");
+            cancellationToken.ThrowIfCancellationRequested();
             AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
             return ticket;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            WriteMarker(directory, "result", "Preparation cancelled.");
+            throw;
         }
         catch (Exception ex)
         {
@@ -249,8 +260,10 @@ internal static class UpdateHandoff
         }
     }
 
-    public static async Task StartHelperAsync(UpdateTicket ticket)
+    public static async Task StartHelperAsync(UpdateTicket ticket, bool startHidden = false,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         RequireInstallable();
         var job = LoadJob(ticket);
         if (job.Target != Environment.ProcessPath || job.ParentId != Environment.ProcessId
@@ -258,23 +271,32 @@ internal static class UpdateHandoff
             throw new IOException("The running application no longer matches this update.");
         string directory = JobDirectory(ticket.Id), helper = Path.Combine(directory, HelperName);
         if (!HashMatches(helper, job.OldHash)) throw new IOException("The update helper changed.");
-        using var restart = EmergencyActions.CreateRestartGuard(ticket.Token);
+        using var restart = EmergencyActions.CreateRestartGuard(ticket.Token, cancellationToken);
+        // Capture visibility at handoff, after downloading. Legacy jobs omit
+        // this field and retain the saved preference as their startup default.
+        job.StartHidden = startHidden;
+        AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
+        cancellationToken.ThrowIfCancellationRequested();
         using var process = StartProcess(helper, "--update-helper", ticket);
         var timer = Stopwatch.StartNew();
         while (timer.Elapsed < TimeSpan.FromSeconds(12))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (ReadMarker(directory, "ready") == ticket.Token)
             {
                 // Persist before permitting process exit/replacement, so a crash
                 // during the handoff cannot produce an automatic restart loop.
                 WriteStatus(job.NewVersion, $"The last update to {job.NewVersion} did not complete. Check for updates to retry.");
+                cancellationToken.ThrowIfCancellationRequested();
                 WriteMarker(directory, "commit", ticket.Token);
+                cancellationToken.ThrowIfCancellationRequested();
                 restart.Complete();
                 return;
             }
             if (process.HasExited) throw new IOException("The update helper could not prepare the replacement. Check folder permissions or use releases.");
-            await Task.Delay(100);
+            await Task.Delay(100, cancellationToken);
         }
+        cancellationToken.ThrowIfCancellationRequested();
         throw new IOException("The update helper did not become ready in time. N strap will remain open.");
     }
 
@@ -304,6 +326,8 @@ internal static class UpdateHandoff
         if (LoadJob(ticket).RestartGuardRequired)
             EmergencyActions.WatchRestartGuard(ticket.Token);
     }
+
+    internal static bool? GetRestartStartHidden(UpdateTicket ticket) => LoadJob(ticket).StartHidden;
 
     internal static async Task AwaitRemovalReadyAsync(UpdateTicket ticket, bool rollback)
     {

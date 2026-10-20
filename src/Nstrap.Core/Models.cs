@@ -65,6 +65,10 @@ public sealed class AppState
     public bool NukeEnabled { get; set; }
     public HotkeyBinding? NukeHotkey { get; set; }
     public bool NukeScopeAcknowledged { get; set; }
+    public HotkeyBinding? ShowHideHotkey { get; set; }
+    public bool SilentModeEnabled { get; set; }
+    public bool StartWithWindows { get; set; }
+    public bool MinimiseOnClose { get; set; }
     public bool UnlockFps { get; set; }
     public int FpsCap { get; set; } = FpsSettingsManager.UnlockedCap;
     public bool FpsChangePending { get; set; }

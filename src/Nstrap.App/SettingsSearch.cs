@@ -35,6 +35,10 @@ public sealed partial class MainViewModel
         new("Program names", "Customize the display name or rename the executable and process.", 6, "appearance title sidebar task manager exe filename identity rename"),
         new("Custom icon", "Choose your own PNG or ICO for the sidebar, window and taskbar.", 6, "appearance image logo icon artwork reset original"),
         new("Kill switch", "Set a global shortcut to close N strap immediately.", 7, "experimental hotkey keyboard shortcut kill switch exit silent emergency"),
+        new("Silent mode", "Hide the app and prepare the saved Player profile in the background.", 7, "experimental background automatic apply flags hidden silent taskbar tray"),
+        new("Show / hide shortcut", "Configure the shortcut that reveals or hides N strap.", 7, "experimental keyboard hotkey show hide visibility background"),
+        new("Start with Windows", "Start silently when you sign in to Windows.", 7, "experimental startup boot login logon background launch automatic"),
+        new("Minimise on close", "Keep N strap running in the background when the window closes.", 7, "experimental minimize minimise close exit hidden taskbar"),
         new("Nuke", "Set an opt-in shortcut to remove N strap and its saved data.", 7, "experimental hotkey keyboard shortcut uninstall remove delete nuke silent")
     ];
     private string _settingsSearch = "";

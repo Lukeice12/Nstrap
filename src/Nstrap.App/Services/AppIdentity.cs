@@ -21,6 +21,7 @@ internal sealed class IdentityJob
     public string Hash { get; set; } = "";
     public int ParentId { get; set; }
     public long ParentStartedUtc { get; set; }
+    public bool? StartHidden { get; set; }
 }
 
 /// <summary>
@@ -62,7 +63,7 @@ internal static class AppIdentity
     public static bool NameIsCurrent(string name) =>
         string.Equals(NormalizeProcessName(name), CurrentProcessName, StringComparison.OrdinalIgnoreCase);
 
-    public static async Task StartRenameAsync(string name)
+    public static async Task StartRenameAsync(string name, bool startHidden = false)
     {
         string normalized = NormalizeProcessName(name);
         if (NameIsCurrent(normalized)) throw new InvalidOperationException("This executable already uses that process name.");
@@ -90,7 +91,8 @@ internal static class AppIdentity
             {
                 Token = ticket.Token, Source = source, Target = target,
                 Hash = Convert.ToHexString(SHA256.HashData(sourceFile)),
-                ParentId = parent.Id, ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks
+                ParentId = parent.Id, ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks,
+                StartHidden = startHidden
             };
             AtomicFile.WriteJson(Path.Combine(directory, "job.json"), job);
             // No overwrite even when a pre-existing target contains identical
@@ -174,6 +176,10 @@ internal static class AppIdentity
 
         try
         {
+            // Only the old exact Run command may follow this authenticated
+            // rename. If repair fails, preserve the original EXE so its existing
+            // sign-in command is not broken. Windows' disabled flag is untouched.
+            StartupRegistration.RepairAfterRename(job.Source, job.Target);
             // Verify and delete using ONE locked handle: a pathname cannot be
             // swapped between the hash check and deletion. No source tree scan.
             DeleteOriginal(job);
@@ -188,6 +194,13 @@ internal static class AppIdentity
         {
             throw new IOException("The new process name is active and the old executable was removed, but the rename status could not be saved. " + ex.Message, ex);
         }
+    }
+
+    internal static bool? GetRestartStartHidden(IdentityTicket ticket)
+    {
+        var job = LoadJob(ticket);
+        RequireCurrentTarget(job);
+        return job.StartHidden;
     }
 
     private static void RequireCurrentTarget(IdentityJob job)

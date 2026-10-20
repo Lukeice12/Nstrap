@@ -36,15 +36,18 @@ public partial class MainWindow
         try
         {
             Model.Save();
+            await StopBackgroundProfilePreparationAsync();
             await SuspendNukeForRestartAsync();
             Model.Success("Preparing the new program name…", "The program will restart when the renamed copy is ready.");
-            await Task.Run(() => AppIdentity.StartRenameAsync(name));
+            bool startHidden = IsHiddenToBackground;
+            await Task.Run(() => AppIdentity.StartRenameAsync(name, startHidden));
             _updateHandoff = true;
-            Application.Current.Shutdown();
+            ((App)Application.Current).RequestShutdown();
         }
         catch
         {
             await ResumeNukeAfterFailedRestartAsync();
+            if (Model.SilentModeEnabled) StartBackgroundProfilePreparation();
             throw;
         }
     });

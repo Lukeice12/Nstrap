@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.4";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.5";
     public bool UnlockFps => State.UnlockFps;
     public bool FpsChangePending => State.FpsChangePending;
     public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
@@ -144,7 +144,8 @@ public sealed partial class MainViewModel : Observable
         NotifyPresetFlagsChanged();
     }
     private void ScheduleSave() { _saveTimer.Stop(); _saveTimer.Start(); }
-    public void Save() { _saveTimer.Stop(); Store.Save(State); }
+    public event EventHandler? PreferencesSaved;
+    public void Save() { _saveTimer.Stop(); Store.Save(State); PreferencesSaved?.Invoke(this, EventArgs.Empty); }
     private void SaveChange(Action change, Action rollback)
     {
         try { change(); Save(); }

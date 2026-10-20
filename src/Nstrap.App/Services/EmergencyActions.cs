@@ -36,8 +36,9 @@ internal static class EmergencyActions
     // Events are deliberately retained for the process lifetime, including in
     // the resumed app. Killing that app must also cancel its waiting updater's
     // rollback path. An absent event makes a stale restart invocation fail.
-    internal static RestartPreparation CreateRestartGuard(string token)
+    internal static RestartPreparation CreateRestartGuard(string token, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (Gate)
         {
             if (_exiting || _preparingNuke || _removal is not null)
@@ -50,12 +51,14 @@ internal static class EmergencyActions
             }
             RestartSignals.Add(signal);
             _restartPending++;
-            return new RestartPreparation(signal);
+            return new RestartPreparation(signal, cancellationToken);
         }
     }
 
-    internal sealed class RestartPreparation(EventWaitHandle signal) : IDisposable
+    internal sealed class RestartPreparation(EventWaitHandle signal, CancellationToken cancellationToken) : IDisposable
     {
+        private readonly CancellationTokenRegistration _cancellation = cancellationToken.UnsafeRegister(
+            static state => { ((EventWaitHandle)state!).Set(); }, signal);
         private bool _completed;
         public void Complete() => _completed = true;
         public void Dispose()
@@ -65,6 +68,11 @@ internal static class EmergencyActions
                 if (!_completed) signal.Set();
                 _restartPending--;
             }
+            // A successful handoff retains this ticket's cancellation callback
+            // until its caller-owned token source is disposed. Ordinary Exit can
+            // still cancel between commit and the UI's shutdown continuation.
+            // The signal itself is already retained for the process lifetime.
+            if (!_completed) _cancellation.Dispose();
         }
     }
 

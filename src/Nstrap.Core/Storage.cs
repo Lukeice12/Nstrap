@@ -58,12 +58,18 @@ public sealed class ProfileStore(string directory)
     {
         state.KillSwitchHotkey?.Validate();
         state.NukeHotkey?.Validate();
+        state.ShowHideHotkey?.Validate();
+        if ((state.SilentModeEnabled || state.MinimiseOnClose || state.StartWithWindows) && state.ShowHideHotkey is null)
+            throw new InvalidDataException("Background mode needs a show/hide shortcut.");
+        if (state.StartWithWindows && !state.SilentModeEnabled)
+            throw new InvalidDataException("Starting with Windows requires Silent mode.");
         if (state.KillSwitchEnabled && state.KillSwitchHotkey is null)
             throw new InvalidDataException("The enabled kill switch needs a shortcut.");
         if (state.NukeEnabled && (state.NukeHotkey is null || !state.NukeScopeAcknowledged))
             throw new InvalidDataException("Nuke needs a shortcut and acceptance of its removal scope.");
-        if (state.KillSwitchHotkey is not null && state.KillSwitchHotkey == state.NukeHotkey)
-            throw new InvalidDataException("Kill switch and Nuke must use different shortcuts.");
+        var shortcuts = new[] { state.KillSwitchHotkey, state.NukeHotkey, state.ShowHideHotkey }.Where(binding => binding is not null).ToArray();
+        if (shortcuts.Distinct().Count() != shortcuts.Length)
+            throw new InvalidDataException("Each action needs a different shortcut.");
         if (state.Theme is not ("Crimson" or "Dark" or "Light"))
             throw new InvalidDataException("The saved appearance theme must be Crimson, Dark or Light. The profiles file was preserved.");
         if (string.IsNullOrWhiteSpace(state.DisplayName) || state.DisplayName.Length > 48 || state.DisplayName.Any(char.IsControl))

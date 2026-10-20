@@ -30,11 +30,11 @@ public partial class MainWindow
     private bool _updateHandoff;
     private bool _startupAcknowledged;
 
-    private async Task<bool> StartupUpdatesAsync()
+    private async Task<bool> StartupUpdatesAsync(CancellationToken cancellationToken)
     {
         var app = (App)Application.Current;
         // A completed restart never immediately checks again. Acknowledgement is
-        // written only after the data loaded and this window reached Loaded.
+        // written only after the data and window were constructed successfully.
         if (app.UpdateRestart is { } restart)
         {
             try
@@ -51,10 +51,12 @@ public partial class MainWindow
         try
         {
             await Task.Run(UpdateHandoff.CleanCompletedJobs);
+            if (IsExitPending) return false;
             var status = UpdateHandoff.ReadStatus();
             if (status.Message.Length != 0) Model.UpdateStatus = status.Message;
             if (!Model.AutoUpdate) return false;
-            await CheckForUpdateAsync();
+            await CheckForUpdateAsync(cancellationToken);
+            if (IsExitPending) return false;
             if (_availableRelease is not null)
             {
                 if (status.AttemptedVersion == _availableRelease.Version.ToString(3))
@@ -64,29 +66,32 @@ public partial class MainWindow
                 else
                 {
                     UpdatesNav.IsChecked = true;
-                    await InstallUpdateAsync();
+                    await InstallUpdateAsync(cancellationToken);
                 }
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex) { UpdateFailure(ex); }
         finally { Model.IsBusy = false; }
         return _updateHandoff;
     }
 
-    private async Task CheckForUpdateAsync()
+    private async Task CheckForUpdateAsync(CancellationToken cancellationToken = default)
     {
         Model.HasAppUpdate = false;
         _availableRelease = null;
         Model.UpdateStatus = "Checking GitHub releases...";
         try
         {
-            _availableRelease = await GitHubUpdates.CheckAsync();
+            _availableRelease = await GitHubUpdates.CheckAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             Model.HasAppUpdate = _availableRelease is not null;
             Model.AvailableUpdate = _availableRelease is null ? "Up to date" :
                 $"{_availableRelease.Version}{(_availableRelease.Preview ? " (preview)" : "")}";
             Model.UpdateStatus = _availableRelease is null ? "You have the newest supported release." :
                 $"N strap {_availableRelease.Version} is available. Install and restart when you are ready.";
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             Model.AvailableUpdate = "Check unavailable";
@@ -94,25 +99,38 @@ public partial class MainWindow
         }
     }
 
-    private async Task InstallUpdateAsync()
+    private async Task InstallUpdateAsync(CancellationToken cancellationToken = default)
     {
         if (_availableRelease is null) return;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Model.Save();
+            await StopBackgroundProfilePreparationAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             await SuspendNukeForRestartAsync();
-            var progress = new Progress<string>(message => Model.UpdateStatus = message);
-            var ticket = await Task.Run(() => UpdateHandoff.PrepareAsync(_availableRelease, progress));
+            cancellationToken.ThrowIfCancellationRequested();
+            var progress = new Progress<string>(message => { if (!IsExitPending) Model.UpdateStatus = message; });
+            var ticket = await Task.Run(() => UpdateHandoff.PrepareAsync(_availableRelease, progress, cancellationToken), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsExitPending) return;
             Model.Save();
             Model.UpdateStatus = "Preparing to restart...";
-            await Task.Run(() => UpdateHandoff.StartHelperAsync(ticket));
+            bool startHidden = IsHiddenToBackground;
+            await Task.Run(() => UpdateHandoff.StartHelperAsync(ticket, startHidden, cancellationToken), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             _updateHandoff = true;
-            Application.Current.Shutdown();
+            ((App)Application.Current).RequestShutdown();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             UpdateFailure(ex);
-            await ResumeNukeAfterFailedRestartAsync();
+            if (!IsExitPending)
+            {
+                await ResumeNukeAfterFailedRestartAsync();
+                if (Model.SilentModeEnabled) StartBackgroundProfilePreparation();
+            }
         }
     }
 
@@ -133,8 +151,8 @@ public partial class MainWindow
                 : "Automatic updates are off. You can still check and install manually.";
         });
     }
-    private async void CheckUpdateClick(object sender, RoutedEventArgs e) => await Busy(CheckForUpdateAsync);
-    private async void InstallUpdateClick(object sender, RoutedEventArgs e) => await Busy(InstallUpdateAsync);
+    private async void CheckUpdateClick(object sender, RoutedEventArgs e) => await Busy(() => CheckForUpdateAsync());
+    private async void InstallUpdateClick(object sender, RoutedEventArgs e) => await Busy(() => InstallUpdateAsync());
     private void OpenReleasesClick(object sender, RoutedEventArgs e) => Run(() =>
         Process.Start(new ProcessStartInfo(GitHubUpdates.ReleasesPage) { UseShellExecute = true }));
 }

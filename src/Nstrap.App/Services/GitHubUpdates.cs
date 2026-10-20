@@ -38,9 +38,10 @@ internal static partial class GitHubUpdates
     [GeneratedRegex(@"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$", RegexOptions.CultureInvariant)]
     private static partial Regex TagPattern();
 
-    public static async Task<AppRelease?> CheckAsync()
+    public static async Task<AppRelease?> CheckAsync(CancellationToken cancellationToken = default)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
         using var request = new HttpRequestMessage(HttpMethod.Get,
             "https://api.github.com/repos/Lukeice12/Nstrap/releases?per_page=100");
         request.Headers.Accept.ParseAdd("application/vnd.github+json");
@@ -80,9 +81,11 @@ internal static partial class GitHubUpdates
             new Uri(expectedUrl), digest[7..].ToUpperInvariant(), size);
     }
 
-    public static async Task DownloadAsync(AppRelease release, string jobDirectory, IProgress<string> progress)
+    public static async Task DownloadAsync(AppRelease release, string jobDirectory, IProgress<string> progress,
+        CancellationToken cancellationToken = default)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMinutes(3));
         string archivePath = Path.Combine(jobDirectory, "package.zip");
         using (var response = await GetDownloadAsync(release.Download, timeout.Token))
         {
@@ -94,8 +97,10 @@ internal static partial class GitHubUpdates
             if (archiveFile.Length != release.Size) throw new IOException("The update download is incomplete.");
             await archiveFile.FlushAsync(timeout.Token);
         }
+        timeout.Token.ThrowIfCancellationRequested();
         progress.Report("Checking the download...");
         if (!UpdateHandoff.HashMatches(archivePath, release.Sha256)) throw new IOException("The update's SHA256 does not match GitHub. No installation files were changed.");
+        timeout.Token.ThrowIfCancellationRequested();
         using (var archive = ZipFile.OpenRead(archivePath))
         {
             if (archive.Entries.Count != 1) throw new IOException("The update archive must contain exactly Nstrap.exe.");

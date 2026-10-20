@@ -10,7 +10,7 @@ public partial class MainWindow
 {
     private GlobalHotkeys? _globalHotkeys;
     private EmergencyHotkey? _capturingShortcut;
-    private bool _killSwitchRegistered, _nukeRegistered, _experimentalClosing;
+    private bool _killSwitchRegistered, _nukeRegistered, _showHideRegistered, _experimentalClosing;
     private bool CanRegisterEmergencyHotkeys =>
         ((App)Application.Current).UpdateRestart is null || _startupAcknowledged;
 
@@ -39,8 +39,16 @@ public partial class MainWindow
 
     private GlobalHotkeys EnsureGlobalHotkeys() => _globalHotkeys ??= new(action =>
     {
-        if (action == EmergencyHotkey.KillSwitch) EmergencyActions.KillSwitch();
-        else EmergencyActions.Nuke();
+        switch (action)
+        {
+            case EmergencyHotkey.KillSwitch: EmergencyActions.KillSwitch(); break;
+            case EmergencyHotkey.Nuke: EmergencyActions.Nuke(); break;
+            case EmergencyHotkey.ShowHide:
+                if (!_experimentalClosing && !Dispatcher.HasShutdownStarted)
+                    Dispatcher.BeginInvoke(new Action(ToggleBackgroundVisibility));
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(action));
+        }
     }, error =>
     {
         if (_experimentalClosing || Dispatcher.HasShutdownStarted) return;
@@ -48,6 +56,7 @@ public partial class MainWindow
         {
             Model.KillSwitchError = "Global shortcut error: " + error.Message;
             Model.NukeError = "Global shortcut error: " + error.Message;
+            Model.ShowHideError = "Global shortcut error: " + error.Message;
         }));
     });
 
@@ -57,7 +66,8 @@ public partial class MainWindow
         try
         {
             RequireAcknowledgedStartup();
-            EnsureGlobalHotkeys().Apply(Model.State.KillSwitchHotkey, null, () => { });
+            EnsureGlobalHotkeys().Apply(Model.State.KillSwitchHotkey, null,
+                _showHideRegistered ? Model.State.ShowHideHotkey : null, () => { });
             _killSwitchRegistered = true;
             Model.KillSwitchStatus = "On. Works while this app is running.";
         }
@@ -71,14 +81,14 @@ public partial class MainWindow
 
     private async Task InitializeNukeHotkeyAsync()
     {
-        if (!Model.NukeEnabled || _nukeRegistered || _experimentalClosing) return;
+        if (!Model.NukeEnabled || _nukeRegistered || IsExitPending) return;
         try
         {
             RequireAcknowledgedStartup();
             await EmergencyActions.PrepareNukeAsync();
-            if (_experimentalClosing) { EmergencyActions.DisarmNuke(); return; }
+            if (IsExitPending) { EmergencyActions.DisarmNuke(); return; }
             EnsureGlobalHotkeys().Apply(_killSwitchRegistered ? Model.State.KillSwitchHotkey : null,
-                Model.State.NukeHotkey, () => { });
+                Model.State.NukeHotkey, _showHideRegistered ? Model.State.ShowHideHotkey : null, () => { });
             _nukeRegistered = true;
             Model.NukeStatus = "On. The shortcut runs immediately, with no confirmation.";
             Model.NukeError = "";
@@ -89,6 +99,25 @@ public partial class MainWindow
             EmergencyActions.DisarmNuke();
             Model.NukeStatus = "Unavailable.";
             Model.NukeError = error.Message + " Turn off and on to retry.";
+            ReleaseUnusedHotkeys();
+        }
+    }
+
+    private void InitializeShowHideHotkey()
+    {
+        if (Model.State.ShowHideHotkey is null || _showHideRegistered) return;
+        try
+        {
+            EnsureGlobalHotkeys().Apply(_killSwitchRegistered ? Model.State.KillSwitchHotkey : null,
+                _nukeRegistered ? Model.State.NukeHotkey : null, Model.State.ShowHideHotkey, () => { });
+            _showHideRegistered = true;
+            Model.ShowHideStatus = "Ready. Opens or hides all N strap windows.";
+            Model.ShowHideError = "";
+        }
+        catch (Exception error)
+        {
+            Model.ShowHideStatus = "Unavailable. Open the executable again to reveal N strap.";
+            Model.ShowHideError = error.Message;
             ReleaseUnusedHotkeys();
         }
     }
@@ -145,13 +174,19 @@ public partial class MainWindow
         _capturingShortcut = null;
         Model.SetShortcutCapture(null);
         try { _globalHotkeys?.Capture(null); }
-        catch (Exception error) { Model.KillSwitchError = Model.NukeError = error.Message; }
+        catch (Exception error) { Model.KillSwitchError = Model.NukeError = Model.ShowHideError = error.Message; }
     }
 
     private async void SaveShortcutClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string tag } || !Enum.TryParse<EmergencyHotkey>(tag, out var action)) return;
-        bool enabled = action == EmergencyHotkey.KillSwitch ? Model.KillSwitchEnabled : Model.NukeEnabled;
+        bool enabled = action switch
+        {
+            EmergencyHotkey.KillSwitch => Model.KillSwitchEnabled,
+            EmergencyHotkey.Nuke => Model.NukeEnabled,
+            EmergencyHotkey.ShowHide => Model.ShortcutDraft(action) is not null,
+            _ => false
+        };
         await ChangeShortcutAsync(action, enabled, Model.ShortcutDraft(action));
     }
 
@@ -159,14 +194,14 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: string tag } || !Enum.TryParse<EmergencyHotkey>(tag, out var action)) return;
         await ChangeShortcutAsync(action, false, null);
-        if (action == EmergencyHotkey.KillSwitch ? Model.State.KillSwitchHotkey is null : Model.State.NukeHotkey is null)
+        if (Model.SavedShortcut(action) is null)
             Model.SetShortcutDraft(action, null);
     }
 
     private async void EmergencyEnabledClick(object sender, RoutedEventArgs e)
     {
         if (sender is not CheckBox { Tag: string tag } box || !Enum.TryParse<EmergencyHotkey>(tag, out var action)) return;
-        var binding = action == EmergencyHotkey.KillSwitch ? Model.State.KillSwitchHotkey : Model.State.NukeHotkey;
+        var binding = Model.SavedShortcut(action);
         await ChangeShortcutAsync(action, box.IsChecked == true, binding);
         box.GetBindingExpression(CheckBox.IsCheckedProperty)?.UpdateTarget();
     }
@@ -183,14 +218,12 @@ public partial class MainWindow
             {
                 _globalHotkeys.Dispose();
                 _globalHotkeys = null;
-                _killSwitchRegistered = _nukeRegistered = false;
+                _killSwitchRegistered = _nukeRegistered = _showHideRegistered = false;
             }
             binding?.Validate();
-            if (enabled) RequireAcknowledgedStartup();
+            if (enabled && action != EmergencyHotkey.ShowHide) RequireAcknowledgedStartup();
             if (enabled && binding is null) throw new InvalidOperationException("Record and save a shortcut first.");
-            var other = action == EmergencyHotkey.KillSwitch ? Model.State.NukeHotkey : Model.State.KillSwitchHotkey;
-            if (binding is not null && binding == other)
-                throw new InvalidOperationException("Choose different shortcuts for Kill switch and Nuke.");
+            Model.ValidateDistinctShortcut(action, binding);
             if (action == EmergencyHotkey.Nuke && enabled)
             {
                 if (!Model.NukeAcknowledged) throw new InvalidOperationException("Accept the removal scope before enabling Nuke.");
@@ -199,13 +232,16 @@ public partial class MainWindow
             }
             bool kill = action == EmergencyHotkey.KillSwitch ? enabled : _killSwitchRegistered;
             bool nuke = action == EmergencyHotkey.Nuke ? enabled : _nukeRegistered;
-            if (kill || nuke) EnsureGlobalHotkeys();
-            Model.SaveEmergencyPreference(_globalHotkeys, action, enabled, binding, kill, nuke);
+            bool showHide = action == EmergencyHotkey.ShowHide ? enabled : _showHideRegistered;
+            if (kill || nuke || showHide) EnsureGlobalHotkeys();
+            Model.SaveEmergencyPreference(_globalHotkeys, action, enabled, binding, kill, nuke, showHide);
             _killSwitchRegistered = kill;
             _nukeRegistered = nuke;
+            _showHideRegistered = showHide;
             if (!Model.NukeEnabled) EmergencyActions.DisarmNuke();
             Model.KillSwitchStatus = kill ? "On. Works while this app is running." : Model.KillSwitchEnabled ? "Unavailable." : "Off.";
             Model.NukeStatus = nuke ? "On. The shortcut runs immediately, with no confirmation." : Model.NukeEnabled ? "Unavailable." : "Off.";
+            Model.ShowHideStatus = showHide ? "Ready. Opens or hides all N strap windows." : "Not set.";
             SetShortcutError(action, "");
             ReleaseUnusedHotkeys();
         }
@@ -223,12 +259,13 @@ public partial class MainWindow
     private void SetShortcutError(EmergencyHotkey action, string message)
     {
         if (action == EmergencyHotkey.KillSwitch) Model.KillSwitchError = message;
-        else Model.NukeError = message;
+        else if (action == EmergencyHotkey.Nuke) Model.NukeError = message;
+        else if (action == EmergencyHotkey.ShowHide) Model.ShowHideError = message;
     }
 
     private void ReleaseUnusedHotkeys()
     {
-        if (_killSwitchRegistered || _nukeRegistered) return;
+        if (_killSwitchRegistered || _nukeRegistered || _showHideRegistered) return;
         _globalHotkeys?.Dispose();
         _globalHotkeys = null;
     }
@@ -238,7 +275,8 @@ public partial class MainWindow
         EndShortcutCapture();
         if (_nukeRegistered)
         {
-            _globalHotkeys!.Apply(_killSwitchRegistered ? Model.State.KillSwitchHotkey : null, null, () => { });
+            _globalHotkeys!.Apply(_killSwitchRegistered ? Model.State.KillSwitchHotkey : null, null,
+                _showHideRegistered ? Model.State.ShowHideHotkey : null, () => { });
             _nukeRegistered = false;
             Model.NukeStatus = "Paused while the app restarts.";
         }

@@ -40,6 +40,13 @@ public sealed class SettingsApplier(string dataDirectory)
         EnsureInstallationExists(installation);
         return Change(installation.ConfigPath, desired, profile.Name, reapplyProfile: true);
     }
+    /// <summary>Automatic application must not replace externally changed owned values.</summary>
+    public ApplyResult ApplyPreservingExternalChanges(RobloxInstallation installation, FlagProfile profile)
+    {
+        var desired = FlagValidator.Validate(profile.Flags);
+        EnsureInstallationExists(installation);
+        return Change(installation.ConfigPath, desired, profile.Name, reapplyProfile: false);
+    }
     public ApplyResult Restore(RobloxInstallation installation)
     {
         EnsureInstallationExists(installation);
@@ -79,7 +86,10 @@ public sealed class SettingsApplier(string dataDirectory)
             if (!values.TryGetValue(name, out var current) || !Same(current, managed.Applied))
             {
                 if (!reapplyProfile)
-                    throw new InvalidDataException($"“{name}” was changed outside N strap. Restore stopped to keep that edit. Apply a profile to use its enabled values and record the current values for restoration, or inspect the backup. No settings were changed.");
+                {
+                    string operation = desired.Count == 0 ? "Restore" : "Background preparation";
+                    throw new InvalidDataException($"“{name}” was changed outside N strap. {operation} stopped to keep that edit. Apply a profile to use its enabled values and record the current values for restoration, or inspect the backup. No settings were changed.");
+                }
                 externalChanges.Add(name);
             }
         }

@@ -146,7 +146,7 @@
               </Grid>
             </StackPanel></Border>
             <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel Margin="0,0,20,0"><TextBlock Text="Close N strap after launch" Style="{StaticResource SettingLabel}"/><TextBlock Text="Exit N strap once Roblox has started." Style="{StaticResource SettingDescription}"/></StackPanel>
+              <StackPanel Margin="0,0,20,0"><TextBlock Text="Close N strap after launch" Style="{StaticResource SettingLabel}"/><TextBlock Text="Close once Roblox starts. Hides instead when Minimise on close is enabled." Style="{StaticResource SettingDescription}"/></StackPanel>
               <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CloseAfterLaunch}" AutomationProperties.Name="Close N strap after launching Roblox"/>
             </Grid></Border>
             <TextBlock Text="Profile" Style="{StaticResource SectionTitle}"/>
@@ -458,6 +458,49 @@
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28,25,28,28">
             <TextBlock Text="Experimental" Style="{StaticResource PageTitle}"/>
             <TextBlock Text="Optional global shortcuts. They work in other apps while N strap is running." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+            <TextBlock Text="Background" Style="{StaticResource SectionTitle}"/>
+            <Border Style="{StaticResource Card}"><StackPanel>
+              <TextBlock Text="Show / hide shortcut" Style="{StaticResource SettingLabel}"/>
+              <TextBlock Text="Opens or hides N strap and its dialogs. Set this before enabling a background option." Style="{StaticResource SettingDescription}"/>
+              <TextBlock Text="{Binding ShowHideShortcut}" FontSize="16" Margin="0,16,0,10" AutomationProperties.Name="Show or hide shortcut"/>
+              <WrapPanel>
+                <Button Content="{Binding ShowHideCaptureLabel}" Tag="ShowHide" Click="RecordShortcutClick" Margin="0,0,8,6"/>
+                <Button Content="Save shortcut" Tag="ShowHide" Click="SaveShortcutClick" IsEnabled="{Binding CanSaveShowHideShortcut}" Margin="0,0,8,6"/>
+                <Button Content="Clear" Tag="ShowHide" Click="ClearShortcutClick" Margin="0,0,0,6"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding ShowHideStatus}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding ShowHideError}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasShowHideError, Converter={StaticResource BoolVisibility}}"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,4,0,0"><StackPanel>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Silent mode" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="Hide N strap and prepare the selected saved Player profile in the background. Settings take effect when Roblox next starts." Style="{StaticResource SettingDescription}"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding SilentModeEnabled, Mode=OneWay}" Tag="Silent" Click="BackgroundPreferenceClick" AutomationProperties.Name="Enable Silent mode"/>
+              </Grid>
+              <TextBlock Text="{Binding BackgroundProfileStatus}" Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,4,0,0"><StackPanel>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Start with Windows" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="Start hidden when you sign in to this Windows account. Requires Silent mode." Style="{StaticResource SettingDescription}"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding StartWithWindows, Mode=OneWay}" Tag="Startup" Click="BackgroundPreferenceClick" AutomationProperties.Name="Start silently with Windows"/>
+              </Grid>
+              <TextBlock Text="{Binding WindowsStartupStatus}" Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel Margin="0,0,20,0">
+                <TextBlock Text="Minimise on close" Style="{StaticResource SettingLabel}"/>
+                <TextBlock Text="The close button hides N strap and keeps it running. Close after Roblox launch also hides it." Style="{StaticResource SettingDescription}"/>
+              </StackPanel>
+              <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimiseOnClose, Mode=OneWay}" Tag="Minimise" Click="BackgroundPreferenceClick" AutomationProperties.Name="Minimise to background on close"/>
+            </Grid></Border>
+            <TextBlock Text="No taskbar or tray icon while hidden. Open the executable again to reveal N strap, or use Exit N strap to quit completely." Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+            <TextBlock Text="{Binding BackgroundError}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasBackgroundError, Converter={StaticResource BoolVisibility}}"/>
             <TextBlock Text="Kill switch" Style="{StaticResource SectionTitle}"/>
             <Border Style="{StaticResource Card}"><StackPanel>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -515,7 +558,10 @@
           </StackPanel>
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding FlagCounter}" FontSize="12"/><TextBlock Text="Drafts save automatically" Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"/></StackPanel>
-            <Button Grid.Column="1" Content="Launch Roblox" Style="{StaticResource Primary}" Click="LaunchClick" IsEnabled="{Binding IsIdle}" MinWidth="128" ToolTip="Closes running Roblox Player sessions before launching" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Content="Exit N strap" Click="ExitAppClick" Margin="0,0,8,0" ToolTip="Quit completely, including background mode"/>
+              <Button Content="Launch Roblox" Style="{StaticResource Primary}" Click="LaunchClick" IsEnabled="{Binding IsIdle}" MinWidth="128" ToolTip="Closes running Roblox Player sessions before launching"/>
+            </StackPanel>
           </Grid>
           <ProgressBar Style="{StaticResource BusyProgress}" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolVisibility}}" Height="2" Margin="0,10,0,0"/>
         </StackPanel>

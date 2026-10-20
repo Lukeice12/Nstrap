@@ -160,6 +160,10 @@ internal sealed class RemovalSession : IDisposable
                 if (!parent.WaitForExit(15_000)) return 1;
                 if (cancel.WaitOne(0)) return 0;
                 removalStarted = true;
+                // Registry cleanup is independent of profile/data access. The
+                // authenticated target is the only Run command this may remove.
+                try { StartupRegistration.RemoveOwned(job.Target); }
+                catch { /* An inaccessible or externally changed entry remains. */ }
                 try
                 {
                     using var dataParents = new RemovalFiles.Pins();

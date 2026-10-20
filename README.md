@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.4/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.5/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -24,6 +24,8 @@ Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/downl
 - Matching title bars across the main window, editor, prompts, and license viewer.
 - Customize the app's displayed name, window icon, and executable/process name.
 - Configure optional global **Kill switch** and **Nuke** shortcuts in **Experimental**.
+- Run silently at Windows sign-in, prepare Player flags in the background, and show or hide the window with a shortcut.
+- Optionally keep N strap running in the background when you close its window.
 - Manually clear old Roblox cache files to free disk space.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
 - Apply profiles to an installed client with backups and recovery information.
@@ -56,7 +58,7 @@ On **Overview**, enable **Custom frame rate** and choose a cap from 1–9,999 FP
 
 If Player is running under your Windows account, pending settings wait until it closes, including sessions elsewhere on the same computer. Another Windows account's Player does not block the change. Keep N strap open to apply pending changes, or reopen it before launching Roblox.
 
-Enable **Close N strap after launch** to exit after Roblox starts successfully. It is off by default.
+Enable **Close N strap after launch** to close the window after Roblox starts successfully. It is off by default. With **Minimise on close** enabled, N strap stays running in the background; otherwise it exits.
 
 ### Graphics presets
 
@@ -86,9 +88,21 @@ The display name changes the window title and sidebar. Choose a custom PNG or IC
 
 The process name changes the executable's filename and the image name in Task Manager's **Details** tab. It requires a restart and a writable local app folder. The new name must not already exist in that folder. The original executable is removed only after the renamed copy opens successfully; shortcuts pointing to the old filename need updating. Automatic updates preserve the chosen filename. The compiled file description and Explorer executable icon remain N strap's.
 
+### Silent mode and background startup
+
+In **Experimental**, record and save a **Show / hide** shortcut before enabling a background option. **Silent mode** hides the app and prepares the selected saved FastFlag profile for the newest Roblox Player installation in each configured location. It watches for new Player installations and saved profile changes. No tray icon, startup window, or notification is shown.
+
+Enable **Start with Windows** to run silently when your Windows account signs in. This uses the extracted portable EXE, so keep it in a permanent folder. Opening the EXE yourself reveals the running app; it is also a way back in if another program takes the shortcut. Errors are shown inside N strap when you open it.
+
+**Minimise on close** keeps N strap running when you press the window's close button, with its windows hidden from the taskbar. Use the shortcut to bring them back, or **Exit N strap** to quit fully. The existing **Close after launch** option follows this close behavior too.
+
+Background application waits while Roblox clients or installers are running. If Roblox starts a newly installed version before its flags are prepared, those changes take effect on its next launch. **Restore** pauses background application for the current run until the profile changes or Silent mode is re-enabled. Starting N strap again prepares the saved profile again. Background application preserves managed values changed outside N strap and reports conflicts inside the app.
+
+Turning off **Start with Windows** removes N strap's own startup entry. Process renaming updates that entry, and Nuke removes it during cleanup. Startup settings changed through Windows are respected.
+
 ### Experimental shortcuts
 
-**Experimental** provides two optional global shortcuts. Both start disabled with no key assigned. They work while N strap is running, including when another app has focus.
+**Experimental** also provides two emergency shortcuts. Both start disabled with no key assigned. They work while N strap is running, including when another app has focus.
 
 - **Kill switch** immediately closes N strap without saving pending edits or showing a confirmation. It leaves Roblox running.
 - **Nuke** closes N strap silently and starts removal of the running portable executable and this Windows account's N strap data: profiles, settings, custom icons, backups, recovery records, and update cache. It first attempts to restore managed Roblox settings where this can be done safely, preserving changes made outside N strap.
@@ -137,7 +151,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.4`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.5`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 

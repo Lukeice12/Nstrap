@@ -21,9 +21,10 @@ public partial class MainWindow : Window
         InitializeGraphicsQualityControls();
         InitializePresetControls();
         InitializeExperimentalControls();
+        InitializeBackgroundProfileControls();
         ThemeManager.Attach(this);
         Closing += OnClosing;
-        Loaded += OnLoaded;
+        Closed += (_, _) => ((App)Application.Current).RequestShutdown();
         AddHandler(DragDrop.PreviewDragOverEvent, new DragEventHandler(PreviewFileDrag), true);
         AddHandler(DragDrop.PreviewDragEnterEvent, new DragEventHandler(PreviewFileDrag), true);
         AddHandler(DragDrop.PreviewDropEvent, new DragEventHandler(PreviewFileDrop), true);
@@ -91,6 +92,7 @@ public partial class MainWindow : Window
     {
         var installation = RequireInstallation();
         await Task.Run(() => Model.Applier.Restore(installation));
+        SuspendBackgroundProfileAfterRestore();
         Model.Success($"Restored managed settings for Roblox {installation.Kind}.", "Original values returned. Restart the client to load these settings.");
     });
     private void ChooseFolderClick(object sender, RoutedEventArgs e) => Run(() =>
@@ -183,7 +185,7 @@ public partial class MainWindow : Window
     }
     private async void ImportClick(object sender, RoutedEventArgs e)
     {
-        if (Model.IsBusy) return;
+        if (Model.IsBusy || IsExitPending) return;
         try
         {
             var path = PickImportFile(this);
@@ -268,34 +270,41 @@ public partial class MainWindow : Window
     });
     private void SupportClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://en.help.roblox.com/hc/en-us/articles/204473560-How-to-Install-and-Play-Roblox"));
     private void GetStudioClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://create.roblox.com/docs/studio/setup"));
-    private void Run(Action action) { try { action(); } catch (Exception ex) { Model.Error(ex); } }
+    private void Run(Action action)
+    {
+        if (IsExitPending) return;
+        try { action(); } catch (Exception ex) { Model.Error(ex); }
+    }
     private async Task Busy(Func<Task> action)
     {
-        if (Model.IsBusy) return;
+        if (Model.IsBusy || IsExitPending) return;
         Model.IsBusy = true;
         try { await action(); }
         catch (Exception ex) { Model.Error(ex); }
         finally { Model.IsBusy = false; }
     }
-    private void OnClosing(object? sender, CancelEventArgs e)
+    private async void OnClosing(object? sender, CancelEventArgs e) => await CloseOrHideAsync(e);
+    private Task? _startupInitialization;
+    // Kept for the window lifetime: after a helper commits, this token still
+    // cancels that restart if ordinary Exit wins before intentional shutdown.
+    private readonly CancellationTokenSource _startupCancellation = new();
+    internal Task InitializeStartupAsync() => _startupInitialization ??= InitializeStartupGuardedAsync();
+    private async Task InitializeStartupGuardedAsync()
     {
-        if (_updateHandoff) return;
-        if (Model.IsBusy) { e.Cancel = true; Model.Success("An operation is still in progress.", "Wait for it to finish before closing N strap."); return; }
-        try { Model.Save(); }
-        catch (Exception ex)
-        {
-            e.Cancel = true;
-            Model.Error(ex);
-            if (MessageDialog.Show(this, $"Your latest changes could not be saved.\n\n{ex.Message}\n\nClose anyway?", "Unsaved changes", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes) e.Cancel = false;
-        }
+        try { await InitializeStartupCoreAsync(); }
+        catch (OperationCanceledException) when (_startupCancellation.IsCancellationRequested) { }
     }
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    private async Task InitializeStartupCoreAsync()
     {
+        if (IsExitPending) return;
         var app = (App)Application.Current;
         // Older updater helpers do not know the emergency cancellation protocol.
         // Acknowledge their handoff before any emergency shortcut can terminate us.
-        if (app.UpdateRestart is not null) await StartupUpdatesAsync();
+        if (app.UpdateRestart is not null) await StartupUpdatesAsync(_startupCancellation.Token);
+        if (IsExitPending) return;
+        InitializeShowHideHotkey();
         InitializeKillSwitchHotkey();
+        RefreshWindowsStartupStatus();
         if (app.IdentityRestart is { } identityRestart)
         {
             AppearanceNav.IsChecked = true;
@@ -306,9 +315,14 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { Model.Error(ex); }
         }
-        else if (app.UpdateRestart is null && await StartupUpdatesAsync()) return;
-        await Busy(InitializeNukeHotkeyAsync);
+        if (Model.SilentModeEnabled) await PrepareBackgroundProfileAtStartupAsync();
+        if (IsExitPending) return;
         if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
+        if (IsExitPending) return;
         if (Model.GraphicsQualityChangePending) await Busy(async () => { await ReconcileGraphicsQualityAsync(); });
+        if (IsExitPending) return;
+        if (app.UpdateRestart is null && app.IdentityRestart is null && await StartupUpdatesAsync(_startupCancellation.Token)) return;
+        if (IsExitPending) return;
+        await Busy(InitializeNukeHotkeyAsync);
     }
 }
