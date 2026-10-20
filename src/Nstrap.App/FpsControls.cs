@@ -9,18 +9,15 @@ namespace Nstrap.App;
 public partial class MainWindow
 {
     private readonly DispatcherTimer _fpsTimer = new() { Interval = TimeSpan.FromSeconds(2) };
-    private bool FpsSuppressed => Application.Current is App { SmokeScreenshot: not null };
-
     private void InitializeFpsControls()
     {
-        if (FpsSuppressed) return;
         _fpsTimer.Tick += FpsTimerTick;
         Closed += (_, _) => _fpsTimer.Stop();
     }
 
     private void FpsTimerTick(object? sender, EventArgs e)
     {
-        if (FpsSuppressed || !Model.FpsChangePending) { _fpsTimer.Stop(); return; }
+        if (!Model.FpsChangePending) { _fpsTimer.Stop(); return; }
         if (Model.IsBusy) return;
         try
         {
@@ -42,7 +39,7 @@ public partial class MainWindow
 
     private async void UnlockFpsClick(object sender, RoutedEventArgs e)
     {
-        if (FpsSuppressed || sender is not CheckBox checkbox) return;
+        if (sender is not CheckBox checkbox) return;
         bool enabled = checkbox.IsChecked == true;
         await Busy(async () =>
         {
@@ -53,13 +50,11 @@ public partial class MainWindow
 
     private async void RetryFpsClick(object sender, RoutedEventArgs e)
     {
-        if (FpsSuppressed) return;
         await Busy(async () => { await ReconcileFpsAsync(); });
     }
 
     private async Task<string> ReconcileFpsAsync()
     {
-        if (FpsSuppressed) return "";
         _fpsTimer.Stop();
         try
         {

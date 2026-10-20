@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
-# NstrapIcon.png is a format-only PNG conversion of the supplied NstrapIcon.webp.
+# NstrapIcon.png contains the supplied artwork used to generate the Windows icon.
 # Resize the complete artwork with its aspect ratio intact; do not redraw or crop it.
 $assetDirectory = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\src\Nstrap.App\Assets'))
 $source = [System.Drawing.Image]::FromFile((Join-Path $assetDirectory 'NstrapIcon.png'))

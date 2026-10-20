@@ -16,7 +16,6 @@ public static class FlagCatalog
         "FIntGrassMovementReducedMotionFactor"
     };
     public static bool IsAllowed(string name) => Allowed.Contains(name);
-    public static int Count => Allowed.Count;
     public static IReadOnlyList<FlagPreset> Presets { get; } =
     [
         new("Direct3D 11", "RENDERER", "Request the Direct3D 11 renderer on Windows.",

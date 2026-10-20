@@ -4,9 +4,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Microsoft.Win32;
 using Nstrap.App.Services;
 using Nstrap.Core;
@@ -15,16 +12,12 @@ namespace Nstrap.App;
 
 public partial class MainWindow : Window
 {
-    private Func<Window, string?> _pickImportFile = PickImportFile;
-    private Task _activeImport = Task.CompletedTask;
     public MainViewModel Model { get; }
     public MainWindow(MainViewModel model)
     {
         Model = model;
         InitializeComponent();
         DataContext = model;
-        Model.UpdatesAllowed = Application.Current is App { UpdatesAllowed: true };
-        if (!Model.UpdatesAllowed) Model.UpdateStatus = "Updates are disabled for custom data folders and smoke mode.";
         InitializeFpsControls();
         SourceInitialized += (_, _) => EnableDarkTitleBar();
         Closing += OnClosing;
@@ -59,8 +52,6 @@ public partial class MainWindow : Window
     private async void ApplyClick(object sender, RoutedEventArgs e) => await Busy(ApplySelectedAsync);
     private async void LaunchClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
-        if (Application.Current is App { SmokeScreenshot: not null })
-            throw new InvalidOperationException("Smoke mode cannot close or launch Roblox clients.");
         var client = RequireInstallation();
         if (!File.Exists(client.ExecutablePath))
             throw new FileNotFoundException("The selected Roblox installation no longer exists. Refresh installations and select the current client.");
@@ -195,8 +186,8 @@ public partial class MainWindow : Window
         if (Model.IsBusy) return;
         try
         {
-            var path = _pickImportFile(this);
-            if (path is not null) { _activeImport = ImportFileAsync(path); await _activeImport; }
+            var path = PickImportFile(this);
+            if (path is not null) await ImportFileAsync(path);
         }
         catch (Exception ex) { Model.Error(ex); }
     }
@@ -232,8 +223,7 @@ public partial class MainWindow : Window
             return;
         }
         e.Effects = DragDropEffects.Copy;
-        _activeImport = ImportFileAsync(path);
-        await _activeImport;
+        await ImportFileAsync(path);
     }
     private Task ImportFileAsync(string path) => Busy(async () =>
     {
@@ -248,10 +238,6 @@ public partial class MainWindow : Window
         try
         {
             var installation = RequireInstallation();
-            // Smoke runs may only write to the explicitly created fixture installation.
-            if (Application.Current is App { SmokeScreenshot: not null }
-                && !string.Equals(installation.DirectoryPath, Path.Combine(Model.DataDirectory, "import-smoke-client"), StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Smoke imports may only apply to their isolated fixture installation.");
             var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
             Model.Success($"Imported {imported}; applied {result.ManagedCount}.",
                 $"Roblox {installation.Kind} · {Model.SelectedProfile.Name}. Restart the client to load these flags. {plan.Notice}".TrimEnd());
@@ -301,93 +287,8 @@ public partial class MainWindow : Window
     }
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (Application.Current is not App { SmokeScreenshot: { } path })
-        {
-            if (await StartupUpdatesAsync()) return;
-            if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
-            return;
-        }
-        try
-        {
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(path);
-            if (Model.SelectedProfile.Flags.Count == 0)
-                foreach (var entry in FlagCatalog.Presets[0].Flags) Model.SelectedProfile.Flags.Add(entry.Copy());
-            Model.Save();
-            await RunImportSmokeChecksAsync(path);
-            FlagsNav.IsChecked = true;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(Path.ChangeExtension(path, ".flags.png"));
-            PresetsNav.IsChecked = true;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(Path.ChangeExtension(path, ".presets.png"));
-            RecoveryNav.IsChecked = true;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(Path.ChangeExtension(path, ".recovery.png"));
-            SettingsNav.IsChecked = true;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(Path.ChangeExtension(path, ".settings.png"));
-            var editor = new JsonEditorWindow(Model.SelectedProfile) { Owner = this };
-            editor.Show();
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            CaptureElement((FrameworkElement)editor.Content, Path.ChangeExtension(path, ".json.png"));
-            editor.Close();
-            await CapturePromptSmokeAsync(path);
-            FlagsNav.IsChecked = true;
-            Width = MinWidth;
-            Height = MinHeight;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            Capture(Path.ChangeExtension(path, ".compact.png"));
-            var actualInstaller = Path.Combine(Environment.CurrentDirectory, ".tools", "downloads", "RobloxPlayerInstaller.exe");
-            if (File.Exists(actualInstaller))
-            {
-                await Task.Run(() =>
-                {
-                    OfficialClient.VerifyPublisher(actualInstaller);
-                    var tampered = Path.Combine(Model.DataDirectory, "tampered-signature-fixture.exe");
-                    try
-                    {
-                        File.Copy(actualInstaller, tampered, true);
-                        using (var stream = new FileStream(tampered, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-                        {
-                            stream.Position = 1024;
-                            int original = stream.ReadByte();
-                            stream.Position = 1024;
-                            stream.WriteByte((byte)(original ^ 1));
-                        }
-                        bool rejected = false;
-                        try { OfficialClient.VerifyPublisher(tampered); } catch (InvalidDataException) { rejected = true; }
-                        if (!rejected) throw new InvalidOperationException("Tampered executable passed signature verification.");
-                    }
-                    finally { if (File.Exists(tampered)) File.Delete(tampered); }
-                    bool unsignedRejected = false;
-                    try { OfficialClient.VerifyPublisher(Environment.ProcessPath!); } catch (InvalidDataException) { unsignedRejected = true; }
-                    if (!unsignedRejected) throw new InvalidOperationException("Unsigned N strap executable passed Roblox publisher verification.");
-                });
-                File.WriteAllText(path + ".signature.txt", "PASS: official installer Windows trust and exact Roblox publisher; tampered installer rejected; unsigned executable rejected. No executable launched.");
-            }
-            File.WriteAllText(path + ".result.txt", "PASS: WPF startup; overview, flags, presets, recovery, settings, JSON editor, minimum size rendered; isolated profile persisted.");
-            Close();
-        }
-        catch (Exception ex) { File.WriteAllText(path + ".error.txt", ex.ToString()); Application.Current.Shutdown(1); }
-    }
-    private void Capture(string path)
-    {
-        UpdateLayout();
-        var content = (FrameworkElement)Content;
-        CaptureElement(content, path);
-    }
-    private static void CaptureElement(FrameworkElement content, string path)
-    {
-        content.UpdateLayout();
-        var bounds = content.LayoutTransform.TransformBounds(new Rect(content.RenderSize));
-        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(bounds.Width), (int)Math.Ceiling(bounds.Height), 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(content);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using var stream = File.Create(path);
-        encoder.Save(stream);
+        if (await StartupUpdatesAsync()) return;
+        if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
     }
     private void EnableDarkTitleBar()
     {

@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.9/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.10/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
@@ -45,7 +45,7 @@ In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case an
 
 Open **Updates** to see the installed version, change **Automatically update when N strap starts**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
 
-The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 `Nstrap.exe`, running normally from a writable local folder. Updates do not request administrator access; custom `--data-dir` and smoke modes disable the updater.
+The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 `Nstrap.exe`, running normally from a writable local folder. Updates do not request administrator access.
 
 Update downloads and helper files are stored in `%LOCALAPPDATA%\Nstrap\updates`. Replacement keeps a backup of the previous executable beside `Nstrap.exe` while startup is confirmed. An incomplete installation pauses automatic retries for that version; the Updates tab lets you retry manually.
 
@@ -73,7 +73,7 @@ The checks use temporary directories; they do not change your installed Roblox c
 ```powershell
 dotnet publish src/Nstrap.App/Nstrap.App.csproj `
   -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None `
   -o artifacts/Nstrap-win-x64
 ```
 
@@ -102,7 +102,5 @@ Roblox loads these settings at startup. Applying a profile uses its enabled flag
 App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `backups` holds previous settings files, and `recovery` holds ownership and interrupted-operation records. Keep the recovery records if you want N strap to restore values it previously changed.
 
 Unlock FPS changes the existing `FramerateCap` property in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Its settings-file backups are stored in `backups\player-fps`, with ownership and interrupted-update records in `recovery`.
-
-For an isolated UI preview, pass `--data-dir <folder> --smoke-screenshot <output.png>`. The preview checks import and apply using a temporary client fixture inside that data folder, writes screenshots, and exits. It does not change installed Roblox clients or launch Roblox. Add `--smoke-import-file <path>` to check a flag file against the same fixture.
 
 N strap is an independent project and is not affiliated with Roblox.

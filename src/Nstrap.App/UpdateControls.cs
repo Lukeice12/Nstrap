@@ -9,12 +9,11 @@ public sealed partial class MainViewModel
 {
     private string _updateStatus = "Check for a newer version of N strap.";
     private string _availableUpdate = "Not checked";
-    private bool _hasAppUpdate, _updatesAllowed = true;
+    private bool _hasAppUpdate;
     public bool AutoUpdate => State.AutoUpdate;
     public string UpdateStatus { get => _updateStatus; set => Set(ref _updateStatus, value); }
     public string AvailableUpdate { get => _availableUpdate; set => Set(ref _availableUpdate, value); }
     public bool HasAppUpdate { get => _hasAppUpdate; set => Set(ref _hasAppUpdate, value); }
-    public bool UpdatesAllowed { get => _updatesAllowed; set => Set(ref _updatesAllowed, value); }
     public void SetAutoUpdate(bool enabled)
     {
         bool previous = State.AutoUpdate;
@@ -32,12 +31,7 @@ public partial class MainWindow
 
     private async Task<bool> StartupUpdatesAsync()
     {
-        if (Application.Current is not App app || !app.UpdatesAllowed)
-        {
-            Model.UpdatesAllowed = false;
-            Model.UpdateStatus = "Updates are disabled for custom data folders and smoke mode.";
-            return false;
-        }
+        var app = (App)Application.Current;
         // A completed restart never immediately checks again. Acknowledgement is
         // written only after the data loaded and this window reached Loaded.
         if (app.UpdateRestart is { } restart)
@@ -79,7 +73,6 @@ public partial class MainWindow
 
     private async Task CheckForUpdateAsync()
     {
-        if (Application.Current is not App { UpdatesAllowed: true }) return;
         Model.HasAppUpdate = false;
         _availableRelease = null;
         Model.UpdateStatus = "Checking GitHub releases...";
@@ -101,7 +94,7 @@ public partial class MainWindow
 
     private async Task InstallUpdateAsync()
     {
-        if (Application.Current is not App { UpdatesAllowed: true } || _availableRelease is null) return;
+        if (_availableRelease is null) return;
         try
         {
             Model.Save();
@@ -124,7 +117,7 @@ public partial class MainWindow
 
     private void AutoUpdateClick(object sender, RoutedEventArgs e)
     {
-        if (Application.Current is not App { UpdatesAllowed: true } || sender is not CheckBox box) return;
+        if (sender is not CheckBox box) return;
         Run(() =>
         {
             Model.SetAutoUpdate(box.IsChecked == true);

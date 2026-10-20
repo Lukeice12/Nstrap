@@ -24,7 +24,7 @@ public sealed class ApplyJournal
     public string AfterHash { get; set; } = "";
     public ApplyManifest Next { get; set; } = new();
 }
-public sealed record ApplyResult(int ManagedCount, string? BackupPath, string TargetPath);
+public sealed record ApplyResult(int ManagedCount, string? BackupPath);
 
 /// <summary>
 /// Owns only keys it has applied. The journal bridges the atomic target replacement and
@@ -69,7 +69,7 @@ public sealed class SettingsApplier(string dataDirectory)
         if (!string.Equals(previous.TargetPath, target, StringComparison.OrdinalIgnoreCase) || previous.Managed is null)
             throw new InvalidDataException("Recovery record does not match this installation.");
         if (previous.Managed.Count == 0) previous.OriginalFileExisted = currentBytes is not null;
-        if (previous.Managed.Count == 0 && desired.Count == 0) return new(0, null, target);
+        if (previous.Managed.Count == 0 && desired.Count == 0) return new(0, null);
 
         // Explicit application uses the profile's desired values. Changed owned values
         // become fresh restore baselines; restoration itself remains conflict-protected.
@@ -115,7 +115,7 @@ public sealed class SettingsApplier(string dataDirectory)
         byte[]? afterBytes = !next.OriginalFileExisted && values.Count == 0
             ? null : JsonSerializer.SerializeToUtf8Bytes(values, JsonDefaults.Options);
         if (currentBytes is null && afterBytes is null && previous.Managed.Count == 0)
-            return new(0, null, target);
+            return new(0, null);
         if (afterBytes is { Length: > FlagValidator.MaximumBytes })
             throw new InvalidDataException("The resulting settings would exceed 2 MB.");
 
@@ -146,7 +146,7 @@ public sealed class SettingsApplier(string dataDirectory)
         else AtomicFile.Write(target, afterBytes);
         AtomicFile.WriteJson(manifestPath, next);
         File.Delete(journalPath);
-        return new(next.Managed.Count, backup, target);
+        return new(next.Managed.Count, backup);
     }
 
     private static void Recover(string target, string manifestPath, string journalPath)

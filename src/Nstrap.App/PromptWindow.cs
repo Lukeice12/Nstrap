@@ -10,7 +10,6 @@ namespace Nstrap.App;
 public sealed class PromptWindow : Window
 {
     private readonly TextBox _input;
-    internal Button SubmitButton { get; }
     internal PromptWindow(Window owner, string title, string description, string initial, string actionLabel = "Save")
     {
         Owner = owner;
@@ -63,9 +62,9 @@ public sealed class PromptWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 22, 0, 0) };
         var cancel = new Button { Content = "Cancel", IsCancel = true, Margin = new Thickness(0, 0, 8, 0) };
         cancel.Click += (_, _) => Close();
-        SubmitButton = new Button { Content = actionLabel, IsDefault = true, Style = (Style)FindResource("Primary") };
-        SubmitButton.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(_input.Text)) DialogResult = true; else _input.Focus(); };
-        buttons.Children.Add(cancel); buttons.Children.Add(SubmitButton);
+        var submitButton = new Button { Content = actionLabel, IsDefault = true, Style = (Style)FindResource("Primary") };
+        submitButton.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(_input.Text)) DialogResult = true; else _input.Focus(); };
+        buttons.Children.Add(cancel); buttons.Children.Add(submitButton);
         panel.Children.Add(buttons);
         layout.Children.Add(new ScrollViewer
         {

@@ -42,7 +42,7 @@ public static partial class FlagValidator
         }
     }
 
-    public static Dictionary<string, JsonElement> Validate(IEnumerable<FlagEntry> entries, bool includeDisabled = false)
+    public static Dictionary<string, JsonElement> Validate(IEnumerable<FlagEntry> entries)
     {
         var result = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
         var names = new HashSet<string>(StringComparer.Ordinal);
@@ -52,7 +52,7 @@ public static partial class FlagValidator
             if (++count > MaximumFlags) throw new InvalidDataException($"A profile can contain at most {MaximumFlags} flags.");
             if (!names.Add(entry.Name)) throw new InvalidDataException($"Duplicate flag: {entry.Name}.");
             var value = Value(entry.Name, entry.Value);
-            if (entry.Enabled || includeDisabled) result.Add(entry.Name, value);
+            if (entry.Enabled) result.Add(entry.Name, value);
         }
         return result;
     }

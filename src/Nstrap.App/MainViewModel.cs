@@ -25,19 +25,17 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.9";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.10";
     public bool UnlockFps => State.UnlockFps;
     public bool FpsChangePending => State.FpsChangePending;
     public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
     public string CatalogDate => FlagCatalog.CheckedOn;
     public string FlagSummary => $"{SelectedProfile.Flags.Count(f => f.Enabled)} enabled · {SelectedProfile.Flags.Count} total";
     public string FlagCounter => $"{SelectedProfile.Flags.Count} flag{(SelectedProfile.Flags.Count == 1 ? "" : "s")} · {SelectedProfile.Flags.Count(f => f.Enabled)} enabled";
-    public string ProfileSummary => $"{Profiles.Count} local profile{(Profiles.Count == 1 ? "" : "s")}";
     public string InstallationSummary => Installations.Count == 0 ? "No clients found" : $"{Installations.Count} client{(Installations.Count == 1 ? "" : "s")} detected";
     public string ClientTitle => SelectedInstallation is null ? "No client selected" : $"Roblox {SelectedInstallation.Kind}";
     public string ClientDetail => SelectedInstallation is null ? "Install Player or choose an installation folder." : SelectedInstallation.Version;
     public string ClientPath => SelectedInstallation?.DirectoryPath ?? "No installation selected";
-    public bool HasInstallation => SelectedInstallation is not null;
     public bool EmptyFlags => SelectedProfile.Flags.Count == 0;
     public string SelectedProfileName => SelectedProfile.Name;
     public bool IsBusy { get => _isBusy; set { if (Set(ref _isBusy, value)) Changed(nameof(IsIdle)); } }
@@ -76,16 +74,16 @@ public sealed partial class MainViewModel : Observable
         {
             if (!Set(ref _selectedInstallation, value)) return;
             State.SelectedInstallationPath = value?.ExecutablePath;
-            foreach (var name in new[] { nameof(ClientTitle), nameof(ClientDetail), nameof(ClientPath), nameof(HasInstallation) }) Changed(name);
+            foreach (var name in new[] { nameof(ClientTitle), nameof(ClientDetail), nameof(ClientPath) }) Changed(name);
             ScheduleSave();
         }
     }
 
-    public MainViewModel(string directory, string? fpsSettingsPath = null)
+    public MainViewModel(string directory)
     {
         Store = new(directory);
         Applier = new(directory);
-        FpsSettings = new(directory, fpsSettingsPath ?? System.IO.Path.Combine(
+        FpsSettings = new(directory, System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "GlobalBasicSettings_13.xml"));
         State = Store.Load();
         if (State.FpsChangePending) _fpsStatus = "FPS change pending.";
@@ -129,7 +127,7 @@ public sealed partial class MainViewModel : Observable
     private void Edited(object? sender, PropertyChangedEventArgs args) { UpdateSummaries(); ScheduleSave(); }
     private void UpdateSummaries()
     {
-        foreach (var name in new[] { nameof(FlagSummary), nameof(FlagCounter), nameof(ProfileSummary), nameof(EmptyFlags), nameof(SelectedProfileName) }) Changed(name);
+        foreach (var name in new[] { nameof(FlagSummary), nameof(FlagCounter), nameof(EmptyFlags), nameof(SelectedProfileName) }) Changed(name);
     }
     private void ScheduleSave() { _saveTimer.Stop(); _saveTimer.Start(); }
     public void Save() { _saveTimer.Stop(); Store.Save(State); }

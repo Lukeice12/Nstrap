@@ -225,14 +225,14 @@
               <TextBlock Text="{Binding AppVersion, StringFormat=Installed version: {0}}" Style="{StaticResource Muted}" Margin="0,16,0,8"/>
               <TextBlock Text="{Binding AvailableUpdate, StringFormat=Latest release: {0}}" Style="{StaticResource Muted}"/>
               <WrapPanel Margin="0,22,0,0">
-                <Button Content="Check for updates" Click="CheckUpdateClick" IsEnabled="{Binding UpdatesAllowed}" Margin="0,0,10,8"/>
+                <Button Content="Check for updates" Click="CheckUpdateClick" Margin="0,0,10,8"/>
                 <Button Content="Install and restart" Click="InstallUpdateClick" Style="{StaticResource Primary}" Visibility="{Binding HasAppUpdate, Converter={StaticResource BoolVisibility}}" Margin="0,0,10,8"/>
                 <Button Content="Open releases" Click="OpenReleasesClick" Style="{StaticResource Quiet}" Margin="0,0,0,8"/>
               </WrapPanel>
               <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap" LineHeight="21" Margin="0,10,0,0"/>
             </StackPanel></Border>
             <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel>
-              <CheckBox Content="Automatically update when N strap starts" IsChecked="{Binding AutoUpdate, Mode=OneWay}" Click="AutoUpdateClick" IsEnabled="{Binding UpdatesAllowed}"/>
+              <CheckBox Content="Automatically update when N strap starts" IsChecked="{Binding AutoUpdate, Mode=OneWay}" Click="AutoUpdateClick"/>
               <TextBlock Text="Checks before you begin using the app. If a newer release is available, N strap downloads it and restarts. Turning this on takes effect the next time you open N strap." Style="{StaticResource Muted}" Margin="0,14,0,0"/>
               <TextBlock Text="Channel: preview and stable releases from Lukeice12/Nstrap on GitHub." Style="{StaticResource Muted}" FontSize="12" Margin="0,14,0,0"/>
             </StackPanel></Border>
