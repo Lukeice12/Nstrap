@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         DataContext = model;
         InitializeFpsControls();
         InitializeGraphicsQualityControls();
+        InitializePresetControls();
         ThemeManager.Attach(this);
         Closing += OnClosing;
         Loaded += OnLoaded;
@@ -157,14 +158,7 @@ public partial class MainWindow : Window
     private void PresetClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (sender is not Button { Tag: FlagPreset preset }) return;
-        var flags = Model.SelectedProfile.Flags.Select(flag => flag.Copy()).ToList();
-        foreach (var item in preset.Flags)
-        {
-            var existing = flags.FirstOrDefault(f => f.Name == item.Name);
-            if (existing is null) flags.Add(item.Copy());
-            else { existing.Value = item.Value; existing.Enabled = true; }
-        }
-        Model.CommitFlags(flags);
+        Model.AddPreset(preset);
         Model.Success($"Added “{preset.Name}” to {Model.SelectedProfile.Name}.", "Review it in FastFlags, then apply the profile when ready.");
     });
     private void JsonClick(object sender, RoutedEventArgs e) => Run(() =>

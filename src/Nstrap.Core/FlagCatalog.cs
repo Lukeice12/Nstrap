@@ -16,6 +16,49 @@ public static class FlagCatalog
         "FIntGrassMovementReducedMotionFactor"
     };
     public static bool IsAllowed(string name) => Allowed.Contains(name);
+    // Values reviewed against Fishstrap 988db40e3e259489f95e4c7ec40f8dbf5685f309.
+    // These are configuration choices, not measured performance guarantees.
+    public static FlagSetting MeshDetail { get; } = new("Mesh detail",
+    [
+        MeshChoice("Low", 250, 250, 250, 250),
+        MeshChoice("Medium", 500, 250, 250, 250),
+        MeshChoice("High", 750, 500, 250, 250),
+        MeshChoice("Highest", 1000, 750, 500, 250)
+    ]);
+    public static FlagSetting Msaa { get; } = new("Anti-aliasing",
+    [
+        new("Off (1×)", [Flag("FIntDebugForceMSAASamples", "1")]),
+        new("2×", [Flag("FIntDebugForceMSAASamples", "2")]),
+        new("4×", [Flag("FIntDebugForceMSAASamples", "4")])
+    ]);
+    public static FlagSetting Renderer { get; } = new("Rendering mode",
+    [
+        new("Direct3D 11", [Flag("FFlagDebugGraphicsPreferD3D11", "true"),
+            Flag("FFlagDebugGraphicsPreferVulkan", "false"), Flag("FFlagDebugGraphicsPreferOpenGL", "false")]),
+        new("Vulkan", [Flag("FFlagDebugGraphicsPreferD3D11", "false"),
+            Flag("FFlagDebugGraphicsPreferVulkan", "true"), Flag("FFlagDebugGraphicsPreferOpenGL", "false")])
+    ], allowAbsentFalse: true);
+    public static FlagSetting TextureQuality { get; } = new("Texture quality",
+    [
+        new("Lower (level 1)", [Flag("DFFlagTextureQualityOverrideEnabled", "true"), Flag("DFIntTextureQualityOverride", "1")]),
+        new("Higher (level 3)", [Flag("DFFlagTextureQualityOverrideEnabled", "true"), Flag("DFIntTextureQualityOverride", "3")])
+    ]);
+    public static FlagSetting Grass { get; } = new("Terrain grass",
+    [
+        new("Off", [Flag("FIntFRMMinGrassDistance", "0"), Flag("FIntFRMMaxGrassDistance", "0")])
+    ]);
+    public static FlagSetting NativeDpi { get; } = new("Preserve quality on high DPI",
+    [
+        new("On", [Flag("DFFlagDisableDPIScale", "true")])
+    ]);
+    public static FlagSetting RenderingQuality { get; } = new("Rendering quality override",
+        Enumerable.Range(1, 21).Select(level => new FlagChoice($"Level {level}",
+            [Flag("DFIntDebugFRMQualityLevelOverride", level.ToString(System.Globalization.CultureInfo.InvariantCulture))])).ToArray());
+    public static FlagPreset LowDetail { get; } = new("Low detail", "PERFORMANCE",
+        "Use low mesh detail, lighter textures, no terrain grass and no MSAA.",
+        "Trades visual detail for potentially less rendering work. Results depend on the experience and hardware.",
+        [.. MeshDetail.Choices[1].Flags, .. TextureQuality.Choices[1].Flags, .. Grass.Choices[1].Flags, .. Msaa.Choices[1].Flags]);
+
     public static IReadOnlyList<FlagPreset> Presets { get; } =
     [
         new("Direct3D 11", "RENDERER", "Request the Direct3D 11 renderer on Windows.",
@@ -37,5 +80,12 @@ public static class FlagCatalog
             "Fullscreen behavior depends on the current client and Windows configuration.",
             [Flag("FFlagHandleAltEnterFullscreenManually", "true")])
     ];
+    private static FlagChoice MeshChoice(string label, int first, int second, int third, int fourth) => new(label,
+    [
+        Flag("DFIntCSGLevelOfDetailSwitchingDistance", first.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        Flag("DFIntCSGLevelOfDetailSwitchingDistanceL12", second.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        Flag("DFIntCSGLevelOfDetailSwitchingDistanceL23", third.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        Flag("DFIntCSGLevelOfDetailSwitchingDistanceL34", fourth.ToString(System.Globalization.CultureInfo.InvariantCulture))
+    ]);
     private static FlagEntry Flag(string name, string value) => new() { Name = name, Value = value };
 }

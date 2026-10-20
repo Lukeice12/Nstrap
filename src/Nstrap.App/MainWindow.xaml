@@ -33,6 +33,41 @@
       <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
+    <Style x:Key="PresetChoiceItem" TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+      <Setter Property="IsEnabled" Value="{Binding IsSelectable}"/>
+    </Style>
+    <Style x:Key="PresetExpander" TargetType="Expander">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+        <StackPanel>
+          <ToggleButton x:Name="HeaderSite" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                        Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"
+                        Foreground="{TemplateBinding Foreground}" Background="Transparent" Padding="10,9" Cursor="Hand"
+                        HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}">
+            <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+              <Border x:Name="HeaderBorder" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                  <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="10" Width="12" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                  <ContentPresenter Grid.Column="1" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                </Grid>
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True"><Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/></Trigger>
+                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource NavHoverBrush}"/></Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
+                <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".45"/></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate></ToggleButton.Template>
+          </ToggleButton>
+          <ContentPresenter x:Name="ExpandedContent" Visibility="Collapsed" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+        </StackPanel>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsExpanded" Value="True"><Setter TargetName="ExpandedContent" Property="Visibility" Value="Visible"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style TargetType="TabItem"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/></Style>
   </Window.Resources>
   <Grid Background="{DynamicResource CanvasBrush}">
@@ -186,13 +221,89 @@
         </TabItem>
         <TabItem>
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28,25,28,28">
-            <TextBlock Text="Presets" Style="{StaticResource PageTitle}"/><TextBlock Text="Add a preset to your profile, then apply it from FastFlags." Style="{StaticResource Muted}" Margin="0,6,0,22"/>
-            <ItemsControl ItemsSource="{Binding Presets}"><ItemsControl.ItemTemplate><DataTemplate>
-              <Border Style="{StaticResource Card}" Margin="0,0,0,4"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <StackPanel Margin="0,0,20,0"><TextBlock Text="{Binding Category}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding Name}" FontSize="16" Margin="0,4,0,6" TextWrapping="Wrap"/><TextBlock Text="{Binding Description}" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Caveat}" Style="{StaticResource Muted}" Margin="0,8,0,0"/></StackPanel>
-                <Button Grid.Column="1" Content="Add to profile" Click="PresetClick" VerticalAlignment="Center" Tag="{Binding}"/>
+            <TextBlock Text="Presets" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Tune visual detail and rendering for your hardware. Changes save to the selected profile." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+            <Grid Margin="0,18,0,12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Profile" Style="{StaticResource SettingLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+              <ComboBox Grid.Column="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" MaxWidth="300" HorizontalAlignment="Left" MinWidth="180" IsEnabled="{Binding IsIdle}" AutomationProperties.Name="Preset profile"/>
+              <Button Grid.Column="2" Content="Review FastFlags" Click="GoFlags"/>
+            </Grid>
+            <TextBlock Text="Apply from FastFlags, or launch with Apply before launch enabled. Restart Roblox to load changes." Style="{StaticResource Muted}" Margin="0,0,0,16"/>
+            <StackPanel IsEnabled="{Binding IsIdle}">
+              <Border Style="{StaticResource Card}"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Low detail" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="Low mesh detail, lighter textures, no terrain grass and no MSAA." Style="{StaticResource SettingDescription}"/>
+                  <TextBlock Text="May reduce rendering work at the cost of detail. Results vary by experience and hardware." Style="{StaticResource Muted}" Margin="0,7,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="Use low detail" Tag="{Binding LowDetailPreset}" Click="PresetClick" VerticalAlignment="Center"/>
               </Grid></Border>
-            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+
+              <TextBlock Text="Geometry" Style="{StaticResource SectionTitle}"/>
+              <Border Style="{StaticResource Card}"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0"><TextBlock Text="Mesh detail" Style="{StaticResource SettingLabel}"/><TextBlock Text="Choose detail thresholds for supported geometry. Lower presets can simplify distant shapes." Style="{StaticResource SettingDescription}"/></StackPanel>
+                <ComboBox x:Name="MeshDetailCombo" Grid.Column="1" ItemsSource="{Binding MeshDetail.Choices}" Tag="{Binding MeshDetail}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" VerticalAlignment="Center" AutomationProperties.Name="Mesh detail"/>
+              </Grid></Border>
+              <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0"><TextBlock Text="Terrain grass" Style="{StaticResource SettingLabel}"/><TextBlock Text="Turn off terrain grass drawing where supported. Does not remove grass built from other objects." Style="{StaticResource SettingDescription}"/></StackPanel>
+                <ComboBox x:Name="GrassCombo" Grid.Column="1" ItemsSource="{Binding Grass.Choices}" Tag="{Binding Grass}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" VerticalAlignment="Center" AutomationProperties.Name="Terrain grass"/>
+              </Grid></Border>
+
+              <TextBlock Text="Rendering &amp; graphics" Style="{StaticResource SectionTitle}"/>
+              <Border Style="{StaticResource Card}"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0"><TextBlock Text="Anti-aliasing (MSAA)" Style="{StaticResource SettingLabel}"/><TextBlock Text="Smooths jagged edges. More samples can increase GPU work; Off uses one sample." Style="{StaticResource SettingDescription}"/></StackPanel>
+                <ComboBox x:Name="MsaaCombo" Grid.Column="1" ItemsSource="{Binding Msaa.Choices}" Tag="{Binding Msaa}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" VerticalAlignment="Center" AutomationProperties.Name="Anti-aliasing MSAA"/>
+              </Grid></Border>
+              <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0"><TextBlock Text="Texture quality" Style="{StaticResource SettingLabel}"/><TextBlock Text="Lower quality can reduce texture memory use. Higher quality keeps more texture detail." Style="{StaticResource SettingDescription}"/></StackPanel>
+                <ComboBox x:Name="TextureQualityCombo" Grid.Column="1" ItemsSource="{Binding TextureQuality.Choices}" Tag="{Binding TextureQuality}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" VerticalAlignment="Center" AutomationProperties.Name="Texture quality"/>
+              </Grid></Border>
+              <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Preserve quality on high DPI" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="Request native resolution instead of Roblox's DPI scaling. Sharper on scaled displays, but can increase GPU work." Style="{StaticResource SettingDescription}"/>
+                  <TextBlock x:Name="CustomDpiNotice" Text="Custom value kept. Click the switch to return to Automatic." Style="{StaticResource Muted}" Margin="0,7,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+                <CheckBox x:Name="NativeDpiToggle" Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsThreeState="False" Click="NativeDpiClick" ToolTip="Off removes the DPI override from this profile." AutomationProperties.Name="Preserve quality on high DPI"/>
+              </Grid></Border>
+              <Border Style="{StaticResource Card}" Margin="0,4,0,0"><StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel Margin="0,0,20,0">
+                    <TextBlock Text="Rendering quality override" Style="{StaticResource SettingLabel}"/>
+                    <TextBlock Text="Request a rendering quality level (FRM). Lower levels reduce detail and may reduce GPU work." Style="{StaticResource SettingDescription}"/>
+                    <TextBlock x:Name="CustomRenderingQualityNotice" Text="Custom value kept. Choose a level, or click the switch to return to Automatic." Style="{StaticResource Muted}" Margin="0,7,0,0" Visibility="Collapsed"/>
+                  </StackPanel>
+                  <CheckBox x:Name="RenderingQualityToggle" Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsThreeState="False" Click="RenderingQualityClick" ToolTip="On starts at level 1. Off removes the FRM override from this profile." AutomationProperties.Name="Rendering quality override"/>
+                </Grid>
+                <Grid x:Name="RenderingQualityOptions" Margin="0,14,0,0" Visibility="Collapsed">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Level 1 is lowest; 21 is highest. Uses a separate scale from the in-game slider." Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                  <ComboBox x:Name="RenderingQualityCombo" Grid.Column="1" ItemsSource="{Binding RenderingQualityLevels}" Tag="{Binding RenderingQuality}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" AutomationProperties.Name="Rendering quality level"/>
+                </Grid>
+              </StackPanel></Border>
+              <Border Style="{StaticResource Card}" Margin="0,4,0,0"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0"><TextBlock Text="Rendering mode" Style="{StaticResource SettingLabel}"/><TextBlock Text="Request a graphics backend. Automatic lets Roblox choose; performance and compatibility depend on your hardware." Style="{StaticResource SettingDescription}"/></StackPanel>
+                <ComboBox x:Name="RendererCombo" Grid.Column="1" ItemsSource="{Binding Renderer.Choices}" Tag="{Binding Renderer}" DisplayMemberPath="Label" ItemContainerStyle="{StaticResource PresetChoiceItem}" SelectionChanged="PresetSelectionChanged" VerticalAlignment="Center" AutomationProperties.Name="Rendering mode"/>
+              </Grid></Border>
+              <TextBlock Text="Automatic removes only that setting's flags. Custom means the profile contains a different, partial or disabled value; it stays unchanged until you choose an option." Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+              <Expander Header="Quick presets" Style="{StaticResource PresetExpander}" Margin="0,24,0,0" IsExpanded="False">
+                <ItemsControl ItemsSource="{Binding Presets}" Margin="0,12,0,0"><ItemsControl.ItemTemplate><DataTemplate>
+                  <Border Style="{StaticResource Card}" Margin="0,0,0,4"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,20,0"><TextBlock Text="{Binding Category}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding Name}" FontSize="16" Margin="0,4,0,6" TextWrapping="Wrap"/><TextBlock Text="{Binding Description}" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Caveat}" Style="{StaticResource Muted}" Margin="0,8,0,0"/></StackPanel>
+                    <Button Grid.Column="1" Content="Add to profile" Click="PresetClick" VerticalAlignment="Center" Tag="{Binding}"/>
+                  </Grid></Border>
+                </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              </Expander>
+            </StackPanel>
           </StackPanel></ScrollViewer>
         </TabItem>
         <TabItem>

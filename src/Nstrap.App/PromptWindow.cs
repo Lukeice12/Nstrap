@@ -2,8 +2,6 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Shell;
 
 namespace Nstrap.App;
 
@@ -19,40 +17,9 @@ public sealed class PromptWindow : Window
         MaxHeight = Math.Max(200, SystemParameters.WorkArea.Height - 32);
         SizeToContent = SizeToContent.Height;
         Style = (Style)FindResource(typeof(Window));
-        WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        WindowChrome.SetWindowChrome(this, new WindowChrome
-        {
-            CaptionHeight = 44, ResizeBorderThickness = new Thickness(0),
-            GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(4),
-            UseAeroCaptionButtons = false
-        });
-        var layout = new DockPanel();
-        var caption = new Grid { Height = 44 };
-        caption.SetResourceReference(Panel.BackgroundProperty, "SurfaceBrush");
-        caption.ColumnDefinitions.Add(new ColumnDefinition());
-        caption.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
-        caption.Children.Add(new TextBlock
-        {
-            Text = title, FontSize = 14, FontWeight = FontWeights.SemiBold,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, 12, 0)
-        });
-        var close = new Button
-        {
-            Content = "\uE8BB", FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = 12, Style = (Style)FindResource("Quiet"), Padding = new Thickness(0),
-            Width = 38, Height = 34, ToolTip = "Close", Focusable = true
-        };
-        AutomationProperties.SetName(close, "Close dialog");
-        WindowChrome.SetIsHitTestVisibleInChrome(close, true);
-        close.Click += (_, _) => Close();
-        Grid.SetColumn(close, 1);
-        caption.Children.Add(close);
-        DockPanel.SetDock(caption, Dock.Top);
-        layout.Children.Add(caption);
         var panel = new StackPanel { Margin = new Thickness(20, 20, 20, 20) };
         panel.Children.Add(new TextBlock
         {
@@ -68,18 +35,11 @@ public sealed class PromptWindow : Window
         submitButton.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(_input.Text)) DialogResult = true; else _input.Focus(); };
         buttons.Children.Add(cancel); buttons.Children.Add(submitButton);
         panel.Children.Add(buttons);
-        layout.Children.Add(new ScrollViewer
+        Content = new ScrollViewer
         {
             Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-        });
-        var border = new Border
-        {
-            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = layout
         };
-        border.SetResourceReference(Border.BackgroundProperty, "CanvasBrush");
-        border.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
-        Content = border;
         ThemeManager.Attach(this);
         PreviewKeyDown += (_, args) =>
         {

@@ -5,6 +5,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Themes/Crimson.xaml"/>
+        <ResourceDictionary Source="Themes/WindowFrame.xaml"/>
       </ResourceDictionary.MergedDictionaries>
       <BitmapImage x:Key="AppIcon" UriSource="pack://application:,,,/Assets/NstrapIcon.png"/>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
@@ -61,7 +62,7 @@
         <Border Height="1" Background="{DynamicResource LineBrush}"/>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
-    <Style TargetType="Window">
+    <Style TargetType="Window" BasedOn="{StaticResource AppWindowFrame}">
       <Setter Property="Icon" Value="{DynamicResource AppIcon}"/>
       <Setter Property="Background" Value="{DynamicResource CanvasBrush}"/>
       <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>

@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.2/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.3/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -17,9 +17,11 @@ Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/downl
 - Drop a `.txt` or `.json` flag file onto the window, or click **Import**, to import and apply it.
 - Enable **Custom frame rate** and choose a Player cap from 1–9,999 FPS.
 - Choose automatic graphics quality or a level from 1–10, with an option to restore the previous setting.
+- Tune mesh detail, MSAA, rendering mode, textures, and terrain grass from **Presets**, or add the **Low detail** preset.
 - Optionally close N strap after Roblox launches.
 - Search settings from the sidebar.
 - Choose Crimson, Dark, or Light in **Appearance**, with Crimson as the default.
+- Matching title bars across the main window, editor, prompts, and license viewer.
 - Customize the app's displayed name, window icon, and executable/process name.
 - Manually clear old Roblox cache files to free disk space.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
@@ -55,6 +57,18 @@ If Player is running under your Windows account, pending settings wait until it 
 
 Enable **Close N strap after launch** to exit after Roblox starts successfully. It is off by default.
 
+### Graphics presets
+
+**Presets** has controls for mesh detail, MSAA, rendering mode, texture quality, terrain grass, DPI scaling, and rendering quality override. Changes save to the selected FastFlag profile. Apply the profile or launch Roblox to use them; restart an already-running client.
+
+**Low detail** combines lower mesh and texture settings, one-sample MSAA, and zero terrain grass distances. It leaves the rendering mode, DPI setting, and rendering quality override alone. The existing quick presets remain available.
+
+**Automatic** removes only that control's overrides from the selected profile. **Custom** means the profile contains values that do not match a preset; those values stay in place until you choose another option. These controls reflect profile switches, imports, and manual flag edits.
+
+Preserving rendering quality with Windows display scaling can increase GPU work. Higher MSAA and rendering quality settings can also cost performance. Renderer preferences vary by graphics hardware and driver; none of these options guarantees a framerate improvement.
+
+See [preset mappings and sources](docs/performance-presets.md) for the exact flags and values.
+
 ### Find settings and clean the cache
 
 Use **Search settings** in the sidebar to find a setting and open its page. FastFlags retain their own name filter, and the JSON editor has separate Ctrl+F text search.
@@ -64,6 +78,8 @@ The manual cache cleaner removes old files from `%LOCALAPPDATA%\Roblox\rbx-stora
 ### Appearance
 
 Choose **Crimson**, **Dark**, or **Light** in **Appearance**. Crimson is the default, and theme changes apply immediately to the app and its dialogs. Dark keeps the charcoal palette.
+
+App windows share a title bar with the selected theme, name, and icon. Moving, resizing, and window commands use Windows' normal handling. The custom maximize button does not provide Windows 11's hover snap-layout menu.
 
 The display name changes the window title and sidebar. Choose a custom PNG or ICO for the window and taskbar icon, or reset to the included artwork. N strap saves its own copy of the selected image.
 
@@ -107,7 +123,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.2`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.3`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 
