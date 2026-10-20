@@ -32,7 +32,7 @@
       <Grid Margin="18,30,18,24">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal" Margin="10,0,0,42">
-          <Image Source="pack://application:,,,/Assets/NstrapLogo.png" Width="64" Height="64" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="N strap logo"/>
+          <Image Source="pack://application:,,,/Assets/NstrapIcon.png" Width="64" Height="64" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="N strap logo"/>
           <TextBlock Text="N strap" FontSize="23" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Grid.Row="1">
@@ -207,10 +207,9 @@
               <Button Content="Open data folder   ↗" Click="DataFolderClick" HorizontalAlignment="Left"/>
             </StackPanel></Border>
             <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="{Binding AppVersion, StringFormat=N strap {0}}" FontSize="21" FontWeight="SemiBold"/>
-              <TextBlock Text="Created by Luke" Margin="0,16,0,8"/>
-              <WrapPanel Margin="0,0,0,4">
-                <TextBlock Text="Discord: lukeistaken" VerticalAlignment="Center" Margin="0,0,16,8"/>
-                <Button Content="Copy username" Click="CopyDiscordClick" Style="{StaticResource Quiet}" ToolTip="Copy the Discord username lukeistaken" Margin="0,0,0,8"/>
+              <WrapPanel Margin="0,16,0,8">
+                <TextBlock Text="Created by lukeistaken" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="Copy username" Click="CopyDiscordClick" Style="{StaticResource Quiet}" ToolTip="Copy the Discord username lukeistaken"/>
               </WrapPanel>
               <TextBlock Text="N strap is not affiliated with Roblox Corporation. Roblox determines which local flags its clients honor." Style="{StaticResource Muted}" Margin="0,14,0,18"/>
               <WrapPanel><Button Content="Roblox flag documentation   ↗" Click="DocsClick" Margin="0,0,12,0"/><Button Content="Roblox support   ↗" Style="{StaticResource Quiet}" Click="SupportClick"/></WrapPanel>
