@@ -13,4 +13,11 @@
     <Resource Include="Assets\Nstrap.ico" />
     <Resource Include="Assets\NstrapIcon.png" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\LICENSE" Link="Licenses\Nstrap.txt" LogicalName="Nstrap.Licenses.Nstrap.txt" />
+    <EmbeddedResource Include="Licenses\DotNet-LICENSE.txt" LogicalName="Nstrap.Licenses.DotNet-LICENSE.txt" />
+    <EmbeddedResource Include="Licenses\DotNet-THIRD-PARTY-NOTICES.txt" LogicalName="Nstrap.Licenses.DotNet-THIRD-PARTY-NOTICES.txt" />
+    <EmbeddedResource Include="Licenses\WindowsDesktop-LICENSE.txt" LogicalName="Nstrap.Licenses.WindowsDesktop-LICENSE.txt" />
+    <EmbeddedResource Include="Licenses\Wpf-THIRD-PARTY-NOTICES.txt" LogicalName="Nstrap.Licenses.Wpf-THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
 </Project>

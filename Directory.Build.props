@@ -4,9 +4,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
-    <Version>0.2.0</Version>
-    <Authors>N strap contributors</Authors>
+    <Version>0.2.1</Version>
+    <Authors>lukeistaken</Authors>
     <Product>N strap</Product>
-    <Copyright>Copyright © 2026 N strap contributors</Copyright>
+    <Copyright>Copyright © 2026 lukeistaken</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 </Project>

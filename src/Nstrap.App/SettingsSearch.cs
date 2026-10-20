@@ -21,6 +21,7 @@ public sealed partial class MainViewModel
         new("Restore and backups", "Restore managed FastFlags or open your backups.", 3, "recovery restore backup undo reset settings files"),
         new("Cache cleanup", "Manually remove old Roblox cache files.", 4, "cache clean cleanup disk storage rbx-storage space temporary"),
         new("About N strap", "Version, data folder, documentation and support.", 4, "about settings contact discord help data location directory"),
+        new("Licenses", "Open component repositories and bundled license notices.", 4, "license licensing MIT notices copyright credits"),
         new("N strap updates", "Check for updates, install a release or change automatic updates.", 5, "updates update upgrade github release automatic download restart version")
     ];
     private string _settingsSearch = "";

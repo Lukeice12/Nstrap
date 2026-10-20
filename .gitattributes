@@ -8,3 +8,6 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.ps1 text eol=crlf
+
+# Preserve bundled upstream notices verbatim, including their whitespace.
+src/Nstrap.App/Licenses/*.txt -text -whitespace

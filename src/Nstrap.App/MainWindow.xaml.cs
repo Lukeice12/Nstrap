@@ -263,6 +263,10 @@ public partial class MainWindow : Window
         Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
     private void DocsClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb(FlagCatalog.SourceUrl));
+    private void NstrapRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/Lukeice12/Nstrap"));
+    private void DotNetRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/runtime"));
+    private void WpfRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/wpf"));
+    private void ViewNoticesClick(object sender, RoutedEventArgs e) => Run(() => new LicensesWindow { Owner = this }.ShowDialog());
     private void CopyDiscordClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         Clipboard.SetText("lukeistaken");

@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.0/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.1/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -97,7 +97,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.0`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.1`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 
@@ -124,5 +124,17 @@ App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `bac
 Profile saves that would exceed the existing 10 MB loading limit are rejected before replacing the saved file. Applying flags also checks that the combined settings, including existing entries, stay within the reader's 5,000-entry limit.
 
 FPS and graphics controls change the existing `FramerateCap` and `SavedQualityLevel` properties in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Settings backups and ownership records allow restoration without replacing unrelated preferences. N strap does not make Roblox's settings file read-only.
+
+## License
+
+N strap is licensed under the [MIT License](LICENSE). Copyright © 2026 lukeistaken.
+You can use, modify, redistribute, or sell it; keep the copyright and license notice
+with copies or substantial portions of the software.
+
+The self-contained executable includes the .NET and Windows Desktop runtimes.
+Their license texts and third-party notices are embedded in the app. In
+**About & settings → Licenses**, each card opens the project's GitHub repository;
+**View notices** opens the bundled texts without an internet connection.
+See [notice sources](src/Nstrap.App/Licenses/README.md) for the matching runtime versions.
 
 N strap is an independent project and is not affiliated with Roblox.

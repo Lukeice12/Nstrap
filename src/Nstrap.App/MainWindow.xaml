@@ -24,6 +24,15 @@
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style x:Key="LicenseCard" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Width" Value="232"/>
+      <Setter Property="MinHeight" Value="74"/>
+      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="Padding" Value="14"/>
+      <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+      <Setter Property="BorderBrush" Value="#303030"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
     <Style TargetType="TabItem"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/></Style>
   </Window.Resources>
   <Grid Background="{StaticResource CanvasBrush}">
@@ -228,6 +237,31 @@
               <TextBlock Text="N strap is not affiliated with Roblox Corporation." Style="{StaticResource Muted}" Margin="0,14,0,0"/>
             </StackPanel></Border>
             <Border Style="{StaticResource Card}" Margin="0,4,0,0"><StackPanel><WrapPanel><Button Content="Flag documentation" Click="DocsClick" Margin="0,0,8,4"/><Button Content="Roblox support" Click="SupportClick" Margin="0,0,0,4"/></WrapPanel><TextBlock Text="{Binding CatalogDate, StringFormat=Support catalog checked {0}}" Style="{StaticResource Muted}" Margin="0,8,0,0"/></StackPanel></Border>
+            <Grid Margin="0,24,0,12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Licenses" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Content="View notices" Click="ViewNoticesClick" ToolTip="Read the full licenses and third-party notices"/>
+            </Grid>
+            <WrapPanel>
+              <Button Style="{StaticResource LicenseCard}" Click="NstrapRepositoryClick" ToolTip="Open N strap on GitHub" AutomationProperties.Name="N strap, MIT License. Open GitHub repository">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel Margin="0,0,14,0"><TextBlock Text="N strap" FontSize="14"/><TextBlock Text="MIT License" Style="{StaticResource SettingDescription}"/></StackPanel>
+                  <TextBlock Grid.Column="1" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+              <Button Style="{StaticResource LicenseCard}" Click="DotNetRepositoryClick" ToolTip="Open .NET Runtime on GitHub" AutomationProperties.Name=".NET Runtime, MIT License. Open GitHub repository">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel Margin="0,0,14,0"><TextBlock Text=".NET Runtime" FontSize="14"/><TextBlock Text="MIT License" Style="{StaticResource SettingDescription}"/></StackPanel>
+                  <TextBlock Grid.Column="1" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+              <Button Style="{StaticResource LicenseCard}" Click="WpfRepositoryClick" ToolTip="Open WPF on GitHub" AutomationProperties.Name="WPF, MIT License. Open GitHub repository">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel Margin="0,0,14,0"><TextBlock Text="WPF" FontSize="14"/><TextBlock Text="MIT License" Style="{StaticResource SettingDescription}"/></StackPanel>
+                  <TextBlock Grid.Column="1" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+            </WrapPanel>
           </StackPanel></ScrollViewer>
         </TabItem>
         <TabItem>
