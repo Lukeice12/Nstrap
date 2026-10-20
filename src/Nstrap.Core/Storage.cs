@@ -56,6 +56,15 @@ public sealed class ProfileStore(string directory)
     }
     private static void ValidatePreferences(AppState state)
     {
+        if (state.Theme is not ("Crimson" or "Dark" or "Light"))
+            throw new InvalidDataException("The saved appearance theme must be Crimson, Dark or Light. The profiles file was preserved.");
+        if (string.IsNullOrWhiteSpace(state.DisplayName) || state.DisplayName.Length > 48 || state.DisplayName.Any(char.IsControl))
+            throw new InvalidDataException("The saved program name must contain 1–48 characters without line breaks or control characters. The profiles file was preserved.");
+        if (state.CustomIconFile is not null && (state.CustomIconFile.Length > 80
+            || !state.CustomIconFile.StartsWith("icon-", StringComparison.Ordinal)
+            || state.CustomIconFile != Path.GetFileName(state.CustomIconFile)
+            || state.CustomIconFile.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0))
+            throw new InvalidDataException("The saved custom icon reference is invalid. The profiles file was preserved.");
         if (state.FpsCap is < 1 or > FpsSettingsManager.UnlockedCap)
             throw new InvalidDataException("The saved FPS cap must be between 1 and 9,999. The profiles file was preserved.");
         if (state.GraphicsQuality is < 0 or > 10)

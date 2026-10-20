@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <Authors>lukeistaken</Authors>
     <Product>N strap</Product>
     <Copyright>Copyright © 2026 lukeistaken</Copyright>

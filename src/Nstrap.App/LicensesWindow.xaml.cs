@@ -12,6 +12,8 @@ public partial class LicensesWindow : Window
     public LicensesWindow()
     {
         InitializeComponent();
+        Title = $"License notices · {ThemeManager.DisplayName}";
+        ThemeManager.Attach(this);
         NoticeSelector.ItemsSource = new[]
         {
             ReadNotice("N strap · MIT License", "Nstrap.txt"),

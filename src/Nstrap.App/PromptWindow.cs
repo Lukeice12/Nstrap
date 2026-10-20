@@ -30,7 +30,8 @@ public sealed class PromptWindow : Window
             UseAeroCaptionButtons = false
         });
         var layout = new DockPanel();
-        var caption = new Grid { Height = 44, Background = (Brush)FindResource("SurfaceBrush") };
+        var caption = new Grid { Height = 44 };
+        caption.SetResourceReference(Panel.BackgroundProperty, "SurfaceBrush");
         caption.ColumnDefinitions.Add(new ColumnDefinition());
         caption.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
         caption.Children.Add(new TextBlock
@@ -72,11 +73,14 @@ public sealed class PromptWindow : Window
             Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         });
-        Content = new Border
+        var border = new Border
         {
-            Background = (Brush)FindResource("CanvasBrush"), BorderBrush = (Brush)FindResource("LineBrush"),
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = layout
         };
+        border.SetResourceReference(Border.BackgroundProperty, "CanvasBrush");
+        border.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
+        Content = border;
+        ThemeManager.Attach(this);
         PreviewKeyDown += (_, args) =>
         {
             if (args.Key == Key.Escape) { args.Handled = true; Close(); }

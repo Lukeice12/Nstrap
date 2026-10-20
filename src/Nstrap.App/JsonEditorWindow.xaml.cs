@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using Microsoft.Win32;
 using Nstrap.Core;
 
@@ -20,6 +19,8 @@ public partial class JsonEditorWindow : Window
     public JsonEditorWindow(FlagProfile profile)
     {
         InitializeComponent();
+        Title = $"JSON editor · {ThemeManager.DisplayName}";
+        ThemeManager.Attach(this);
         // Editing must preserve disabled entries and unfinished values verbatim.
         // Validation belongs to Replace/Export, so invalid drafts remain correctable.
         Editor.Text = JsonSerializer.Serialize(profile.Flags.Select(flag => new
@@ -172,7 +173,7 @@ public partial class JsonEditorWindow : Window
     private void NextMatchClick(object sender, RoutedEventArgs e) => NavigateMatch(previous: false);
     private void CloseFindClick(object sender, RoutedEventArgs e) => CloseFind();
 
-    private void Error(Exception ex) { Feedback.Foreground = new SolidColorBrush(Color.FromRgb(255, 166, 145)); Feedback.Text = ex.Message; }
+    private void Error(Exception ex) { Feedback.SetResourceReference(ForegroundProperty, "ErrorBrush"); Feedback.Text = ex.Message; }
     private List<FlagEntry> Validate()
         => ShowValidation(FlagValidator.ParseImport(Editor.Text, ProfileStore.MaximumBytes));
 
@@ -180,7 +181,7 @@ public partial class JsonEditorWindow : Window
     {
         var flags = document.Flags;
         ImportNotice = document.Notice;
-        Feedback.Foreground = (Brush)FindResource("MutedBrush");
+        Feedback.SetResourceReference(ForegroundProperty, "MutedBrush");
         Feedback.Text = $"Valid JSON · {flags.Count} flag{(flags.Count == 1 ? "" : "s")} · {flags.Count(flag => flag.Enabled)} enabled. {ImportNotice}".TrimEnd();
         return flags;
     }

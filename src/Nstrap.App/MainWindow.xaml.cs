@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using Microsoft.Win32;
 using Nstrap.App.Services;
 using Nstrap.Core;
@@ -20,7 +19,7 @@ public partial class MainWindow : Window
         DataContext = model;
         InitializeFpsControls();
         InitializeGraphicsQualityControls();
-        SourceInitialized += (_, _) => EnableDarkTitleBar();
+        ThemeManager.Attach(this);
         Closing += OnClosing;
         Loaded += OnLoaded;
         AddHandler(DragDrop.PreviewDragOverEvent, new DragEventHandler(PreviewFileDrag), true);
@@ -133,7 +132,7 @@ public partial class MainWindow : Window
     {
         if (Model.Profiles.Count <= 1) throw new InvalidOperationException("Keep at least one profile. Create another profile before deleting this one.");
         var previous = Model.SelectedProfile;
-        if (MessageBox.Show(this, $"Delete the profile “{previous.Name}”? Applied settings stay in place until you apply another profile or restore them.", "Delete profile", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (MessageDialog.Show(this, $"Delete the profile “{previous.Name}”? Applied settings stay in place until you apply another profile or restore them.", "Delete profile", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         Model.DeleteSelectedProfile(); Model.Success("Profile deleted.");
     });
     private void AddFlagClick(object sender, RoutedEventArgs e) => Run(() =>
@@ -263,7 +262,7 @@ public partial class MainWindow : Window
         Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
     private void DocsClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb(FlagCatalog.SourceUrl));
-    private void NstrapRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/Lukeice12/Nstrap"));
+    private void NstrapRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/Lukeice12/Nstrap/blob/main/LICENSE"));
     private void DotNetRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/runtime"));
     private void WpfRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/wpf"));
     private void ViewNoticesClick(object sender, RoutedEventArgs e) => Run(() => new LicensesWindow { Owner = this }.ShowDialog());
@@ -292,20 +291,23 @@ public partial class MainWindow : Window
         {
             e.Cancel = true;
             Model.Error(ex);
-            if (MessageBox.Show(this, $"Your latest changes could not be saved.\n\n{ex.Message}\n\nClose anyway?", "Unsaved changes", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes) e.Cancel = false;
+            if (MessageDialog.Show(this, $"Your latest changes could not be saved.\n\n{ex.Message}\n\nClose anyway?", "Unsaved changes", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes) e.Cancel = false;
         }
     }
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (await StartupUpdatesAsync()) return;
+        if (((App)Application.Current).IdentityRestart is { } identityRestart)
+        {
+            AppearanceNav.IsChecked = true;
+            try
+            {
+                AppIdentity.CompleteRestart(identityRestart);
+                Model.Success("Executable renamed.", $"Running as {Model.CurrentExecutableName}. Update any shortcuts to the previous filename.");
+            }
+            catch (Exception ex) { Model.Error(ex); }
+        }
+        else if (await StartupUpdatesAsync()) return;
         if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
         if (Model.GraphicsQualityChangePending) await Busy(async () => { await ReconcileGraphicsQualityAsync(); });
     }
-    private void EnableDarkTitleBar()
-    {
-        int enabled = 1;
-        DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, 20, ref enabled, sizeof(int));
-    }
-    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
 }

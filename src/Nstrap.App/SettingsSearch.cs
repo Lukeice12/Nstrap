@@ -22,7 +22,10 @@ public sealed partial class MainViewModel
         new("Cache cleanup", "Manually remove old Roblox cache files.", 4, "cache clean cleanup disk storage rbx-storage space temporary"),
         new("About N strap", "Version, data folder, documentation and support.", 4, "about settings contact discord help data location directory"),
         new("Licenses", "Open component repositories and bundled license notices.", 4, "license licensing MIT notices copyright credits"),
-        new("N strap updates", "Check for updates, install a release or change automatic updates.", 5, "updates update upgrade github release automatic download restart version")
+        new("N strap updates", "Check for updates, install a release or change automatic updates.", 5, "updates update upgrade github release automatic download restart version"),
+        new("Color theme", "Choose Crimson, Dark or Light. Changes apply immediately.", 6, "appearance color theme crimson dark light palette"),
+        new("Program names", "Customize the display name or rename the executable and process.", 6, "appearance title sidebar task manager exe filename identity rename"),
+        new("Custom icon", "Choose your own PNG or ICO for the sidebar, window and taskbar.", 6, "appearance image logo icon artwork reset original")
     ];
     private string _settingsSearch = "";
     public ObservableCollection<SettingsSearchResult> SettingsSearchResults { get; } = [];
@@ -65,6 +68,7 @@ public partial class MainWindow
             3 => RecoveryNav,
             4 => SettingsNav,
             5 => UpdatesNav,
+            6 => AppearanceNav,
             _ => null
         };
         if (navigation is null) return;

@@ -56,6 +56,10 @@ public sealed class AppState
     public bool ApplyBeforeLaunch { get; set; } = true;
     public bool CloseAfterLaunch { get; set; }
     public bool AutoUpdate { get; set; } = true;
+    // Missing preferences in existing profiles adopt the new default palette.
+    public string Theme { get; set; } = "Crimson";
+    public string DisplayName { get; set; } = "N strap";
+    public string? CustomIconFile { get; set; }
     public bool UnlockFps { get; set; }
     public int FpsCap { get; set; } = FpsSettingsManager.UnlockedCap;
     public bool FpsChangePending { get; set; }

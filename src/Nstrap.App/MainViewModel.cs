@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.1";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.2";
     public bool UnlockFps => State.UnlockFps;
     public bool FpsChangePending => State.FpsChangePending;
     public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
@@ -87,6 +87,7 @@ public sealed partial class MainViewModel : Observable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "GlobalBasicSettings_13.xml"));
         State = Store.Load();
         InitializePerformancePreferences();
+        InitializeAppearancePreferences();
         if (State.FpsChangePending) _fpsStatus = "FPS change pending.";
         _selectedProfile = State.Profiles.FirstOrDefault(p => p.Id == State.SelectedProfileId) ?? State.Profiles[0];
         FlagsView = MakeView();

@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.1/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.2/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -19,6 +19,8 @@ Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/downl
 - Choose automatic graphics quality or a level from 1–10, with an option to restore the previous setting.
 - Optionally close N strap after Roblox launches.
 - Search settings from the sidebar.
+- Choose Crimson, Dark, or Light in **Appearance**, with Crimson as the default.
+- Customize the app's displayed name, window icon, and executable/process name.
 - Manually clear old Roblox cache files to free disk space.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
 - Apply profiles to an installed client with backups and recovery information.
@@ -59,13 +61,21 @@ Use **Search settings** in the sidebar to find a setting and open its page. Fast
 
 The manual cache cleaner removes old files from `%LOCALAPPDATA%\Roblox\rbx-storage`, which is shared by Player and Studio. Both clients must be closed for your Windows account. Cleanup frees disk space; it does not increase FPS, and Roblox may download cached content again. It does not run automatically.
 
+### Appearance
+
+Choose **Crimson**, **Dark**, or **Light** in **Appearance**. Crimson is the default, and theme changes apply immediately to the app and its dialogs. Dark keeps the charcoal palette.
+
+The display name changes the window title and sidebar. Choose a custom PNG or ICO for the window and taskbar icon, or reset to the included artwork. N strap saves its own copy of the selected image.
+
+The process name changes the executable's filename and the image name in Task Manager's **Details** tab. It requires a restart and a writable local app folder. The new name must not already exist in that folder. The original executable is removed only after the renamed copy opens successfully; shortcuts pointing to the old filename need updating. Automatic updates preserve the chosen filename. The compiled file description and Explorer executable icon remain N strap's.
+
 ## Update N strap
 
 Open **Updates** to see the installed version, change **Update automatically**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
 
-The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 `Nstrap.exe`, running normally from a writable local folder. Updates do not request administrator access.
+The updater uses this repository's public GitHub releases, including preview releases, and checks the package against GitHub's SHA-256 digest before installing it. Network or download failures leave the current version available to use. Installation requires the published Windows x64 executable, running normally from a writable local folder. A custom process filename is supported. Updates do not request administrator access.
 
-Update downloads and helper files are stored in `%LOCALAPPDATA%\Nstrap\updates`. Replacement keeps a backup of the previous executable beside `Nstrap.exe` while startup is confirmed. An incomplete installation pauses automatic retries for that version; the Updates tab lets you retry manually.
+Update downloads and helper files are stored in `%LOCALAPPDATA%\Nstrap\updates`. Replacement keeps a backup of the previous executable beside the running app while startup is confirmed. An incomplete installation pauses automatic retries for that version; the Updates tab lets you retry manually.
 
 Versions before **0.1.7** need a one-time manual upgrade: close N strap, download and extract the current ZIP, and run the new `Nstrap.exe`.
 
@@ -97,7 +107,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.1`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.2`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 
@@ -133,7 +143,8 @@ with copies or substantial portions of the software.
 
 The self-contained executable includes the .NET and Windows Desktop runtimes.
 Their license texts and third-party notices are embedded in the app. In
-**About & settings → Licenses**, each card opens the project's GitHub repository;
+**About & settings → Licenses**, N strap's card opens its GitHub license page and
+the .NET and WPF cards open their project repositories;
 **View notices** opens the bundled texts without an internet connection.
 See [notice sources](src/Nstrap.App/Licenses/README.md) for the matching runtime versions.
 

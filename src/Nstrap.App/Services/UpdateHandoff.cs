@@ -67,13 +67,13 @@ internal static class UpdateHandoff
         using var identity = WindowsIdentity.GetCurrent();
         return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
-    private static void RequireUnelevated()
+    internal static void RequireUnelevated()
     {
         if (IsElevated())
-            throw new InvalidOperationException("Restart N strap normally, without Run as administrator, to install updates.");
+            throw new InvalidOperationException("Restart N strap normally, without Run as administrator, to install updates or rename the executable.");
     }
 
-    private static void CreatePrivateDirectory(string path)
+    internal static void CreatePrivateDirectory(string path)
     {
         RequireUnelevated();
         RequireRegularPath(path);
@@ -90,7 +90,7 @@ internal static class UpdateHandoff
         RequirePrivateDirectory(path);
     }
 
-    private static void RequirePrivateDirectory(string path)
+    internal static void RequirePrivateDirectory(string path)
     {
         RequireRegularPath(path);
         using var identity = WindowsIdentity.GetCurrent();
@@ -122,8 +122,8 @@ internal static class UpdateHandoff
 #pragma warning disable IL3000 // Empty Location intentionally identifies the supported single-file publish.
         if (!Environment.Is64BitProcess || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64
             || typeof(UpdateHandoff).Assembly.Location.Length != 0
-            || !string.Equals(Path.GetFileName(Environment.ProcessPath), "Nstrap.exe", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Automatic installation requires the portable Windows x64 Nstrap.exe. Download the ZIP from releases and keep the executable's original name.");
+            || !AppIdentity.IsExecutableName(Path.GetFileName(Environment.ProcessPath)))
+            throw new InvalidOperationException("This action requires the portable Windows x64 N strap executable. Download and extract the ZIP from releases.");
 #pragma warning restore IL3000
         string target = Environment.ProcessPath!;
         RequireRegularPath(target);
@@ -184,7 +184,7 @@ internal static class UpdateHandoff
             || !Version.TryParse(job.NewVersion, out var newVersion) || newVersion <= oldVersion
             || newVersion.Revision != -1 || oldVersion.Revision != -1
             || !Path.IsPathFullyQualified(job.Target)
-            || !string.Equals(Path.GetFileName(job.Target), "Nstrap.exe", StringComparison.OrdinalIgnoreCase)
+            || !AppIdentity.IsExecutableName(Path.GetFileName(job.Target))
             || !string.Equals(job.Target, Path.GetFullPath(job.Target), StringComparison.OrdinalIgnoreCase)
             || job.Target.StartsWith(Root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new IOException("The update job has unexpected fields.");
