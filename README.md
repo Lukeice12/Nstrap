@@ -33,6 +33,8 @@ Edits save automatically. File import enables imported entries and replaces valu
 
 Exported JSON includes enabled flags. **Replace profile** inside the JSON editor replaces the profile's entries and enables the imported flags. Presets merge into the selected profile when chosen.
 
+In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
+
 ## Run from source
 
 Requires Windows 10/11 x64 and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). The SDK version is recorded in `global.json`.

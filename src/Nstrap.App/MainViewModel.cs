@@ -23,7 +23,7 @@ public sealed class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.2";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.3";
     public string CatalogDate => FlagCatalog.CheckedOn;
     public string FlagSummary => $"{SelectedProfile.Flags.Count(f => f.Enabled)} enabled · {SelectedProfile.Flags.Count} total";
     public string FlagCounter => $"{SelectedProfile.Flags.Count} flag{(SelectedProfile.Flags.Count == 1 ? "" : "s")} · {SelectedProfile.Flags.Count(f => f.Enabled)} enabled";

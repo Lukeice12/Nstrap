@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Authors>N strap contributors</Authors>
     <Product>N strap</Product>
     <Copyright>Copyright © 2026 N strap contributors</Copyright>
