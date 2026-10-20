@@ -18,12 +18,6 @@ public static class OfficialClient
         return running;
     }
 
-    public static void EnsureClosed(ClientKind kind)
-    {
-        if (IsRunning(kind))
-            throw new InvalidOperationException($"Close Roblox {kind} before changing its flags. Settings are read when the client starts.");
-    }
-
     public static void Launch(RobloxInstallation installation)
     {
         if (!File.Exists(installation.ExecutablePath))

@@ -37,10 +37,19 @@ public sealed class SettingsApplier(string dataDirectory)
     public ApplyResult Apply(RobloxInstallation installation, FlagProfile profile)
     {
         var desired = FlagValidator.Validate(profile.Flags);
+        EnsureInstallationExists(installation);
         return Change(installation.ConfigPath, desired, profile.Name);
     }
-    public ApplyResult Restore(RobloxInstallation installation) =>
-        Change(installation.ConfigPath, new(StringComparer.Ordinal), "");
+    public ApplyResult Restore(RobloxInstallation installation)
+    {
+        EnsureInstallationExists(installation);
+        return Change(installation.ConfigPath, new(StringComparer.Ordinal), "");
+    }
+    private static void EnsureInstallationExists(RobloxInstallation installation)
+    {
+        if (!File.Exists(installation.ExecutablePath))
+            throw new IOException("The selected Roblox installation no longer exists. Refresh installations, select the current client, and apply again.");
+    }
 
     private ApplyResult Change(string target, Dictionary<string, JsonElement> desired, string profileName)
     {
@@ -119,7 +128,7 @@ public sealed class SettingsApplier(string dataDirectory)
         AtomicFile.WriteJson(journalPath, journal);
         CheckPath(target);
         // Catch a settings change between reading and commit. A third-party writer which races
-        // this final check is outside our lock; the UI requires Roblox to be closed first.
+        // this final check is outside our lock. Sharing violations fail without forcing access.
         if (Hash(ReadCurrent(target)) != journal.BeforeHash)
         {
             File.Delete(journalPath);

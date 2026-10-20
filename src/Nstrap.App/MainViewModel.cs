@@ -12,7 +12,7 @@ public sealed class MainViewModel : Observable
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private FlagProfile _selectedProfile;
     private RobloxInstallation? _selectedInstallation;
-    private string _search = "", _status = "Ready", _statusDetail = "";
+    private string _search = "", _status = "", _statusDetail = "";
     private bool _isBusy, _hasError;
     private int _page;
     public ProfileStore Store { get; }
@@ -23,9 +23,10 @@ public sealed class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.1";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.2";
     public string CatalogDate => FlagCatalog.CheckedOn;
     public string FlagSummary => $"{SelectedProfile.Flags.Count(f => f.Enabled)} enabled · {SelectedProfile.Flags.Count} total";
+    public string FlagCounter => $"{SelectedProfile.Flags.Count} flag{(SelectedProfile.Flags.Count == 1 ? "" : "s")} · {SelectedProfile.Flags.Count(f => f.Enabled)} enabled";
     public string ProfileSummary => $"{Profiles.Count} local profile{(Profiles.Count == 1 ? "" : "s")}";
     public string InstallationSummary => Installations.Count == 0 ? "No clients found" : $"{Installations.Count} client{(Installations.Count == 1 ? "" : "s")} detected";
     public string ClientTitle => SelectedInstallation is null ? "No client selected" : $"Roblox {SelectedInstallation.Kind}";
@@ -120,10 +121,27 @@ public sealed class MainViewModel : Observable
     private void Edited(object? sender, PropertyChangedEventArgs args) { UpdateSummaries(); ScheduleSave(); }
     private void UpdateSummaries()
     {
-        foreach (var name in new[] { nameof(FlagSummary), nameof(ProfileSummary), nameof(EmptyFlags), nameof(SelectedProfileName) }) Changed(name);
+        foreach (var name in new[] { nameof(FlagSummary), nameof(FlagCounter), nameof(ProfileSummary), nameof(EmptyFlags), nameof(SelectedProfileName) }) Changed(name);
     }
     private void ScheduleSave() { _saveTimer.Stop(); _saveTimer.Start(); }
     public void Save() { _saveTimer.Stop(); Store.Save(State); }
+    public void CommitImport(FlagImportPlan plan)
+    {
+        var previous = SelectedProfile.Flags.ToArray();
+        ReplaceFlags(plan.MergedFlags);
+        try { Save(); }
+        catch
+        {
+            ReplaceFlags(previous);
+            _saveTimer.Stop();
+            throw;
+        }
+    }
+    private void ReplaceFlags(IEnumerable<FlagEntry> flags)
+    {
+        while (SelectedProfile.Flags.Count > 0) SelectedProfile.Flags.RemoveAt(SelectedProfile.Flags.Count - 1);
+        foreach (var flag in flags) SelectedProfile.Flags.Add(flag);
+    }
     public void RefreshInstallations()
     {
         string? prior = State.SelectedInstallationPath;

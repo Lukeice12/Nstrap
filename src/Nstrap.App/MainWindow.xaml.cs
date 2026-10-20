@@ -15,6 +15,8 @@ namespace Nstrap.App;
 
 public partial class MainWindow : Window
 {
+    private Func<Window, string?> _pickImportFile = PickImportFile;
+    private Task _activeImport = Task.CompletedTask;
     public MainViewModel Model { get; }
     public MainWindow(MainViewModel model)
     {
@@ -24,6 +26,11 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => EnableDarkTitleBar();
         Closing += OnClosing;
         Loaded += OnLoaded;
+        AddHandler(DragDrop.PreviewDragOverEvent, new DragEventHandler(PreviewFileDrag), true);
+        AddHandler(DragDrop.PreviewDragEnterEvent, new DragEventHandler(PreviewFileDrag), true);
+        AddHandler(DragDrop.PreviewDropEvent, new DragEventHandler(PreviewFileDrop), true);
+        AddHandler(DragDrop.PreviewDragLeaveEvent, new DragEventHandler((_, _) => DropCue.Visibility = Visibility.Collapsed), true);
+        Deactivated += (_, _) => DropCue.Visibility = Visibility.Collapsed;
     }
     private void Navigate(object sender, RoutedEventArgs e)
     {
@@ -40,7 +47,6 @@ public partial class MainWindow : Window
     private async Task ApplySelectedAsync()
     {
         var installation = RequireInstallation();
-        OfficialClient.EnsureClosed(installation.Kind);
         FlagValidator.Validate(Model.SelectedProfile.Flags);
         Model.Save();
         var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
@@ -51,10 +57,12 @@ public partial class MainWindow : Window
     private async void LaunchClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
         var client = RequireInstallation();
+        bool alreadyRunning = OfficialClient.IsRunning(client.Kind);
         if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
         Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
         await Task.Run(() => OfficialClient.Launch(client));
-        Model.Success($"Roblox {client.Kind} started.", "Your session continues in the official Roblox client.");
+        Model.Success(alreadyRunning ? $"Roblox {client.Kind} is already running." : $"Roblox {client.Kind} started.",
+            alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "");
     });
     private async void InstallClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
@@ -66,9 +74,8 @@ public partial class MainWindow : Window
     private async void RestoreClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
         var installation = RequireInstallation();
-        OfficialClient.EnsureClosed(installation.Kind);
         await Task.Run(() => Model.Applier.Restore(installation));
-        Model.Success($"Restored managed settings for Roblox {installation.Kind}.", "Original values returned. Other settings were preserved.");
+        Model.Success($"Restored managed settings for Roblox {installation.Kind}.", "Original values returned. Restart the client to load these settings.");
     });
     private void ChooseFolderClick(object sender, RoutedEventArgs e) => Run(() =>
     {
@@ -117,7 +124,7 @@ public partial class MainWindow : Window
     });
     private void AddFlagClick(object sender, RoutedEventArgs e) => Run(() =>
     {
-        string? name = PromptWindow.Ask(this, "Add a flag", "Enter a full flag name, such as FFlagExample.", "");
+        string? name = PromptWindow.Ask(this, "Add a flag", "Enter a full flag name, such as FFlagExample.", "", "Add");
         if (name is null) return;
         if (Model.SelectedProfile.Flags.Any(f => f.Name == name)) throw new InvalidDataException("That flag is already in this profile.");
         string value = FlagValidator.GetTypeHint(name) == "Boolean" ? "true" : FlagValidator.GetTypeHint(name) == "String" ? "" : "0";
@@ -156,6 +163,88 @@ public partial class MainWindow : Window
             foreach (var flag in flags) Model.SelectedProfile.Flags.Add(flag);
             Model.Save();
             Model.Success($"Imported {flags.Count} flags.", "All imported entries are enabled. The previous profile entries were replaced.");
+        }
+    });
+    private static string? PickImportFile(Window owner)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import flags", Filter = "Flag files (*.txt;*.json)|*.txt;*.json|JSON files (*.json)|*.json|Text files (*.txt)|*.txt",
+            CheckFileExists = true, Multiselect = false
+        };
+        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+    }
+    private async void ImportClick(object sender, RoutedEventArgs e)
+    {
+        if (Model.IsBusy) return;
+        try
+        {
+            var path = _pickImportFile(this);
+            if (path is not null) { _activeImport = ImportFileAsync(path); await _activeImport; }
+        }
+        catch (Exception ex) { Model.Error(ex); }
+    }
+    private static string? DroppedFile(IDataObject data)
+    {
+        try
+        {
+            return data.GetDataPresent(DataFormats.FileDrop)
+                && data.GetData(DataFormats.FileDrop) is string[] { Length: 1 } paths
+                && FlagFileImport.IsSupportedPath(paths[0]) ? paths[0] : null;
+        }
+        catch (Exception) { return null; }
+    }
+    private void PreviewFileDrag(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        bool accepted = !Model.IsBusy && DroppedFile(e.Data) is not null && (e.AllowedEffects & DragDropEffects.Copy) != 0;
+        e.Effects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+        DropCue.Visibility = accepted ? Visibility.Visible : Visibility.Collapsed;
+    }
+    private async void PreviewFileDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        DropCue.Visibility = Visibility.Collapsed;
+        e.Handled = true;
+        e.Effects = DragDropEffects.None;
+        if (Model.IsBusy) return;
+        var path = DroppedFile(e.Data);
+        if (path is null || (e.AllowedEffects & DragDropEffects.Copy) == 0)
+        {
+            Model.Error(new InvalidDataException("Drop one .txt or .json file containing a JSON flag object."));
+            return;
+        }
+        e.Effects = DragDropEffects.Copy;
+        _activeImport = ImportFileAsync(path);
+        await _activeImport;
+    }
+    private Task ImportFileAsync(string path) => Busy(async () =>
+    {
+        var snapshot = Model.SelectedProfile.Flags.Select(flag => flag.Copy()).ToArray();
+        Model.Success("Reading flag file…");
+        var plan = await Task.Run(() => FlagFileImport.Read(path, snapshot));
+        Model.CommitImport(plan);
+        string imported = $"{plan.ImportedCount} flag{(plan.ImportedCount == 1 ? "" : "s")}";
+        Model.Search = "";
+        FlagsNav.IsChecked = true;
+        Model.Success($"Imported {imported}. Applying profile…");
+        try
+        {
+            var installation = RequireInstallation();
+            // Smoke runs may only write to the explicitly created fixture installation.
+            if (Application.Current is App { SmokeScreenshot: not null }
+                && !string.Equals(installation.DirectoryPath, Path.Combine(Model.DataDirectory, "import-smoke-client"), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Smoke imports may only apply to their isolated fixture installation.");
+            var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
+            Model.Success($"Imported {imported}; applied {result.ManagedCount}.",
+                $"Roblox {installation.Kind} · {Model.SelectedProfile.Name}. Restart the client to load these flags.");
+        }
+        catch (Exception ex)
+        {
+            Model.HasError = true;
+            Model.Status = $"Imported {imported}. Not applied.";
+            Model.StatusDetail = $"{ex.Message} The profile is saved; use Apply profile after resolving this.";
         }
     });
     private void BackupsClick(object sender, RoutedEventArgs e) => Run(() => OpenFolder(Model.Applier.BackupDirectory));
@@ -198,6 +287,7 @@ public partial class MainWindow : Window
             if (Model.SelectedProfile.Flags.Count == 0)
                 foreach (var entry in FlagCatalog.Presets[0].Flags) Model.SelectedProfile.Flags.Add(entry.Copy());
             Model.Save();
+            await RunImportSmokeChecksAsync(path);
             FlagsNav.IsChecked = true;
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             Capture(Path.ChangeExtension(path, ".flags.png"));
@@ -215,6 +305,7 @@ public partial class MainWindow : Window
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             CaptureElement((FrameworkElement)editor.Content, Path.ChangeExtension(path, ".json.png"));
             editor.Close();
+            await CapturePromptSmokeAsync(path);
             FlagsNav.IsChecked = true;
             Width = MinWidth;
             Height = MinHeight;
@@ -262,7 +353,8 @@ public partial class MainWindow : Window
     private static void CaptureElement(FrameworkElement content, string path)
     {
         content.UpdateLayout();
-        var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        var bounds = content.LayoutTransform.TransformBounds(new Rect(content.RenderSize));
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(bounds.Width), (int)Math.Ceiling(bounds.Height), 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(content);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));

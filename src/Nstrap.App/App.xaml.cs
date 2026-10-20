@@ -10,6 +10,7 @@ public partial class App : Application
 {
     private Mutex? _instance;
     public string? SmokeScreenshot { get; private set; }
+    public string? SmokeImportFile { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -20,10 +21,13 @@ public partial class App : Application
             {
                 if (e.Args[i] == "--data-dir" && i + 1 < e.Args.Length) dataDirectory = Path.GetFullPath(e.Args[++i]);
                 else if (e.Args[i] == "--smoke-screenshot" && i + 1 < e.Args.Length) SmokeScreenshot = Path.GetFullPath(e.Args[++i]);
+                else if (e.Args[i] == "--smoke-import-file" && i + 1 < e.Args.Length) SmokeImportFile = Path.GetFullPath(e.Args[++i]);
                 else throw new ArgumentException($"Unknown or incomplete option: {e.Args[i]}");
             }
             if (SmokeScreenshot is not null && !e.Args.Contains("--data-dir"))
                 throw new ArgumentException("Screenshot smoke mode requires an isolated --data-dir.");
+            if (SmokeImportFile is not null && SmokeScreenshot is null)
+                throw new ArgumentException("A smoke import fixture requires --smoke-screenshot and an isolated --data-dir.");
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(dataDirectory.ToUpperInvariant())))[..20];
             _instance = new Mutex(true, @"Local\Nstrap-" + key, out bool first);
             if (!first)

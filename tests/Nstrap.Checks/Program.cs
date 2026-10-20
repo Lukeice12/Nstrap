@@ -3,9 +3,11 @@ using System.Text;
 using System.Text.Json;
 using Nstrap.Core;
 
-var checks = new (string Name, Action Run)[]
+var checks = new List<(string Name, Action Run)>
 {
     ("Validation and JSON import", Validation),
+    ("Validated file import and merge", FileImportMerge),
+    ("Invalid import leaves originals unchanged", InvalidFileImport),
     ("Profile persistence", Persistence),
     ("Apply and restore owned keys", ApplyRestore),
     ("External edit conflict", ExternalConflict),
@@ -14,6 +16,10 @@ var checks = new (string Name, Action Run)[]
     ("Interrupted operation recovery", Recovery),
     ("Player and Studio discovery", Discovery)
 };
+if (args is ["--import-file", var samplePath])
+    checks.Add(("Supplied file round-trip through fixture apply", () => SuppliedFileImport(samplePath)));
+else if (args.Length != 0)
+    throw new ArgumentException("Usage: Nstrap.Checks [--import-file path]");
 int failures = 0;
 foreach (var (name, run) in checks)
 {
@@ -24,7 +30,7 @@ foreach (var (name, run) in checks)
         Console.Error.WriteLine($"FAIL {name}: {error}");
     }
 }
-Console.WriteLine($"{checks.Length - failures}/{checks.Length} checks passed");
+Console.WriteLine($"{checks.Count - failures}/{checks.Count} checks passed");
 return failures == 0 ? 0 : 1;
 
 static void Validation()
@@ -84,6 +90,88 @@ static void Persistence()
     Equal(emptyProfiles, File.ReadAllText(store.StatePath));
     File.WriteAllText(store.StatePath, "{\"SchemaVersion\":1,\"Profiles\":[{\"Id\":\"00000000-0000-0000-0000-000000000001\",\"Flags\":[]},{\"Id\":\"00000000-0000-0000-0000-000000000001\",\"Flags\":[]}]}");
     Throws<InvalidDataException>(() => store.Load());
+}
+
+static void FileImportMerge()
+{
+    using var fixture = new Fixture();
+    var profile = Profile("Merge", ("FFlagImportSwitch", "true"), ("FStringUnrelated", "keep"));
+    profile.Flags[0].Enabled = false;
+    var path = fixture.Path("flags.TXT");
+    File.WriteAllText(path, """{"FFlagImportSwitch":"False","FLogImportLevel":"7","FStringImportValue":"null"}""");
+    var plan = FlagFileImport.Read(path, profile.Flags);
+    Equal(3, plan.ImportedCount);
+    Equal(4, plan.MergedFlags.Count);
+    Equal("False", plan.MergedFlags.Single(f => f.Name == "FFlagImportSwitch").Value);
+    Check(plan.MergedFlags.Single(f => f.Name == "FFlagImportSwitch").Enabled, "import did not enable replaced flag");
+    Equal("keep", plan.MergedFlags.Single(f => f.Name == "FStringUnrelated").Value);
+    Equal("null", plan.MergedFlags.Single(f => f.Name == "FStringImportValue").Value);
+    Equal(2, profile.Flags.Count);
+    Equal("true", profile.Flags[0].Value);
+    Check(!profile.Flags[0].Enabled, "planning mutated the input profile");
+    var desired = FlagValidator.Validate(plan.MergedFlags);
+    Equal(false, desired["FFlagImportSwitch"].GetBoolean());
+    Equal(7, desired["FLogImportLevel"].GetInt32());
+    Equal(JsonValueKind.String, desired["FStringImportValue"].ValueKind);
+    Check(FlagFileImport.IsSupportedPath("flags.JSON"), "JSON extension was rejected");
+    var stale = fixture.Installation("removed-client", ClientKind.Player);
+    File.Delete(stale.ExecutablePath);
+    Throws<IOException>(() => new SettingsApplier(fixture.Path("data")).Apply(stale, profile));
+    Check(!Directory.Exists(Path.GetDirectoryName(stale.ConfigPath)), "apply recreated a stale installation's settings folder");
+}
+
+static void InvalidFileImport()
+{
+    using var fixture = new Fixture();
+    var profile = Profile("Keep", ("FFlagOriginal", "true"));
+    var store = new ProfileStore(fixture.Path("data"));
+    var state = AppState.Create();
+    state.Profiles[0] = profile;
+    state.SelectedProfileId = profile.Id;
+    store.Save(state);
+    var original = File.ReadAllBytes(store.StatePath);
+    foreach (var json in new[]
+    {
+        """{"FFlagOriginal":"False","FIntBroken":"NaN"}""",
+        """{"FFlagOriginal":false,"FFlagOriginal":true}""",
+        """[{"FFlagOriginal":false}]""",
+        """{"FFlagOriginal":false,"FStringBroken":null}"""
+    })
+    {
+        var path = fixture.Path("malformed.json");
+        File.WriteAllText(path, json);
+        ThrowsAny(() => FlagFileImport.Read(path, profile.Flags), "invalid file import accepted");
+        Equal("true", profile.Flags.Single().Value);
+        Check(original.SequenceEqual(File.ReadAllBytes(store.StatePath)), "invalid import changed persisted state");
+    }
+    var oversized = fixture.Path("oversized.txt");
+    File.WriteAllBytes(oversized, new byte[FlagValidator.MaximumBytes + 1]);
+    Throws<InvalidDataException>(() => FlagFileImport.Read(oversized, profile.Flags));
+    Throws<InvalidDataException>(() => FlagFileImport.Read(fixture.Path("flags.exe"), profile.Flags));
+}
+
+static void SuppliedFileImport(string path)
+{
+    using var fixture = new Fixture();
+    var plan = FlagFileImport.Read(path, []);
+    var source = FlagValidator.ReadObject(File.ReadAllBytes(path));
+    Equal(source.Count, plan.ImportedCount);
+    foreach (var flag in plan.MergedFlags)
+    {
+        var value = source[flag.Name];
+        Equal(value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText(), flag.Value);
+    }
+    var profile = new FlagProfile { Name = "External sample fixture", Flags = new(plan.MergedFlags) };
+    var installation = fixture.Installation("isolated-sample", ClientKind.Player);
+    var applier = new SettingsApplier(fixture.Path("data"));
+    var result = applier.Apply(installation, profile);
+    Equal(source.Count, result.ManagedCount);
+    var actual = ReadSettings(installation.ConfigPath);
+    foreach (var (name, expected) in FlagValidator.Validate(plan.MergedFlags))
+        Check(JsonElement.DeepEquals(expected, actual[name]), $"Value was not preserved for {name}");
+    applier.Restore(installation);
+    Check(!File.Exists(installation.ConfigPath), "fixture restore left settings behind");
+    Console.WriteLine($"Verified {source.Count} supplied flags through isolated apply and restore.");
 }
 
 static void ApplyRestore()

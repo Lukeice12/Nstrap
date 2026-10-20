@@ -33,7 +33,7 @@ public partial class JsonEditorWindow : Window
     {
         try
         {
-            var dialog = new OpenFileDialog { Title = "Import FastFlags JSON", Filter = "JSON settings (*.json)|*.json|All files (*.*)|*.*", CheckFileExists = true };
+            var dialog = new OpenFileDialog { Title = "Import FastFlags JSON", Filter = "Flag files (*.txt;*.json)|*.txt;*.json|All files (*.*)|*.*", CheckFileExists = true };
             if (dialog.ShowDialog(this) != true) return;
             if (new FileInfo(dialog.FileName).Length > FlagValidator.MaximumBytes) throw new InvalidDataException("The JSON file exceeds 2 MB.");
             Editor.Text = File.ReadAllText(dialog.FileName); Validate();
