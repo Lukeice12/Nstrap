@@ -9,6 +9,7 @@ namespace Nstrap.App.Services;
 
 internal sealed class RemovalJob
 {
+    public RemovalJob() { }
     public string Token { get; set; } = "";
     public string Target { get; set; } = "";
     public string Hash { get; set; } = "";

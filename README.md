@@ -97,7 +97,7 @@ Click **Record shortcut**, press Ctrl or Alt with another key, then **Save short
 
 Nuke permanently deletes saved profiles. It prepares a background helper while enabled and pauses during app updates or executable renames, then re-arms after restart. Turning it off or closing the app normally cancels removal.
 
-Cleanup is limited to N strap's own files. Copies and downloads elsewhere, Windows records, restore points, and the main app's .NET runtime extraction cache are outside its scope. Locked or redirected files can remain. Roblox settings may also remain if a client is running, their current values have changed elsewhere, or recovery information cannot be used safely.
+Cleanup is limited to N strap's own files. Copies and downloads elsewhere, Windows records, restore points, and the main app's .NET runtime extraction cache are outside its scope. Locked, protected, or redirected files can remain. Roblox settings may also remain if a client is running, their current values have changed elsewhere, or recovery information cannot be used safely.
 
 ## Update N strap
 
