@@ -103,7 +103,7 @@ public partial class MainWindow : Window
         string? name = PromptWindow.Ask(this, "New profile", "Give this profile a name.", "My profile");
         if (name is null) return;
         var profile = new FlagProfile { Name = name };
-        Model.Profiles.Add(profile); Model.SelectedProfile = profile; Model.Save();
+        Model.AddProfile(profile);
         Model.Success($"Created “{name}”.", "Add flags or choose a preset to begin.");
     });
     private void DuplicateProfileClick(object sender, RoutedEventArgs e) => Run(() =>
@@ -111,22 +111,21 @@ public partial class MainWindow : Window
         string? name = PromptWindow.Ask(this, "Duplicate profile", "Name your new copy.", Model.SelectedProfile.Name + " copy");
         if (name is null) return;
         var copy = Model.SelectedProfile.Copy(name);
-        Model.Profiles.Add(copy); Model.SelectedProfile = copy; Model.Save();
+        Model.AddProfile(copy);
         Model.Success($"Created “{name}”.");
     });
     private void RenameProfileClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         string? name = PromptWindow.Ask(this, "Rename profile", "Choose a name that is easy to recognize.", Model.SelectedProfile.Name);
         if (name is null) return;
-        Model.SelectedProfile.Name = name; Model.Save(); Model.Success("Profile renamed.");
+        Model.RenameSelectedProfile(name); Model.Success("Profile renamed.");
     });
     private void DeleteProfileClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (Model.Profiles.Count <= 1) throw new InvalidOperationException("Keep at least one profile. Create another profile before deleting this one.");
         var previous = Model.SelectedProfile;
         if (MessageBox.Show(this, $"Delete the profile “{previous.Name}”? Applied settings stay in place until you apply another profile or restore them.", "Delete profile", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        Model.SelectedProfile = Model.Profiles.First(p => p != previous);
-        Model.Profiles.Remove(previous); Model.Save(); Model.Success("Profile deleted.");
+        Model.DeleteSelectedProfile(); Model.Success("Profile deleted.");
     });
     private void AddFlagClick(object sender, RoutedEventArgs e) => Run(() =>
     {
@@ -136,27 +135,28 @@ public partial class MainWindow : Window
         string value = FlagValidator.GetTypeHint(name) == "Boolean" ? "true" : FlagValidator.GetTypeHint(name) == "String" ? "" : "0";
         FlagValidator.Value(name, value);
         var flag = new FlagEntry { Name = name, Value = value };
-        Model.SelectedProfile.Flags.Add(flag);
+        Model.CommitFlags(Model.SelectedProfile.Flags.Append(flag));
         Model.Search = "";
         FlagsGrid.SelectedItem = flag; FlagsGrid.ScrollIntoView(flag);
-        Model.Save(); Model.Success("Flag added.", "Edit its value in the table. The checkbox controls whether it is applied.");
+        Model.Success("Flag added.", "Edit its value in the table. The checkbox controls whether it is applied.");
     });
     private void RemoveFlagClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (FlagsGrid.SelectedItem is not FlagEntry flag) throw new InvalidOperationException("Select a flag row to remove it.");
-        Model.SelectedProfile.Flags.Remove(flag); Model.Save();
+        Model.CommitFlags(Model.SelectedProfile.Flags.Where(item => item != flag));
         Model.Success("Flag removed from this profile.", "Apply the profile to restore that flag's previous value in the client.");
     });
     private void PresetClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         if (sender is not Button { Tag: FlagPreset preset }) return;
+        var flags = Model.SelectedProfile.Flags.Select(flag => flag.Copy()).ToList();
         foreach (var item in preset.Flags)
         {
-            var existing = Model.SelectedProfile.Flags.FirstOrDefault(f => f.Name == item.Name);
-            if (existing is null) Model.SelectedProfile.Flags.Add(item.Copy());
+            var existing = flags.FirstOrDefault(f => f.Name == item.Name);
+            if (existing is null) flags.Add(item.Copy());
             else { existing.Value = item.Value; existing.Enabled = true; }
         }
-        Model.Save();
+        Model.CommitFlags(flags);
         Model.Success($"Added “{preset.Name}” to {Model.SelectedProfile.Name}.", "Review it in FastFlags, then apply the profile when ready.");
     });
     private void JsonClick(object sender, RoutedEventArgs e) => Run(() =>
@@ -164,10 +164,7 @@ public partial class MainWindow : Window
         var editor = new JsonEditorWindow(Model.SelectedProfile) { Owner = this };
         if (editor.ShowDialog() == true && editor.ImportedFlags is { } flags)
         {
-            // Removing individually preserves observable subscriptions.
-            while (Model.SelectedProfile.Flags.Count > 0) Model.SelectedProfile.Flags.RemoveAt(Model.SelectedProfile.Flags.Count - 1);
-            foreach (var flag in flags) Model.SelectedProfile.Flags.Add(flag);
-            Model.Save();
+            Model.CommitFlags(flags);
             Model.Success($"Imported {flags.Count} flag{(flags.Count == 1 ? "" : "s")}; {flags.Count(flag => flag.Enabled)} enabled.",
                 $"The previous profile entries were replaced. {editor.ImportNotice}".TrimEnd());
         }
@@ -230,7 +227,7 @@ public partial class MainWindow : Window
         var snapshot = Model.SelectedProfile.Flags.Select(flag => flag.Copy()).ToArray();
         Model.Success("Reading flag file…");
         var plan = await Task.Run(() => FlagFileImport.Read(path, snapshot));
-        Model.CommitImport(plan);
+        Model.CommitFlags(plan.MergedFlags);
         string imported = $"{plan.ImportedCount} flag{(plan.ImportedCount == 1 ? "" : "s")} ({plan.ImportedEnabledCount} enabled)";
         Model.Search = "";
         FlagsNav.IsChecked = true;

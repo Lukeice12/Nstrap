@@ -112,6 +112,8 @@ public sealed class SettingsApplier(string dataDirectory)
             values[name] = value;
         }
 
+        if (values.Count > FlagValidator.MaximumFlags)
+            throw new InvalidDataException($"The resulting settings would exceed {FlagValidator.MaximumFlags} entries, including existing settings. No settings were changed.");
         byte[]? afterBytes = !next.OriginalFileExisted && values.Count == 0
             ? null : JsonSerializer.SerializeToUtf8Bytes(values, JsonDefaults.Options);
         if (currentBytes is null && afterBytes is null && previous.Managed.Count == 0)

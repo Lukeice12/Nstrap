@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 using Nstrap.Core;
@@ -21,6 +22,46 @@ public static class OfficialClient
         foreach (var process in processes) process.Dispose();
         return running;
     }
+
+    public static bool IsPlayerRunningForCurrentUser()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        var user = identity.User ?? throw new IOException("Windows could not identify the account for the FPS settings.");
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+            // WTS supplies the primary-token SID without opening another user's token.
+            // Do not filter by session: this account's FPS settings are shared across sessions.
+            if (!WTSEnumerateProcesses(IntPtr.Zero, 0, 1, out buffer, out int count))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not check Player sessions for your account. The FPS change remains pending.");
+            if (count < 0 || (count > 0 && buffer == IntPtr.Zero))
+                throw new IOException("Windows returned an invalid Player session list. The FPS change remains pending.");
+            int size = Marshal.SizeOf<WtsProcessInfo>();
+            for (int index = 0; index < count; index++)
+            {
+                var process = Marshal.PtrToStructure<WtsProcessInfo>(IntPtr.Add(buffer, checked(index * size)));
+                if (!string.Equals(Marshal.PtrToStringUni(process.ProcessName), "RobloxPlayerBeta.exe", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (process.UserSid == IntPtr.Zero)
+                    throw new IOException("Windows could not identify the account for a Player session. The FPS change remains pending.");
+                if (user.Equals(new SecurityIdentifier(process.UserSid))) return true;
+            }
+            return false;
+        }
+        finally { if (buffer != IntPtr.Zero) WTSFreeMemory(buffer); }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WtsProcessInfo
+    {
+        public uint SessionId, ProcessId;
+        public IntPtr ProcessName, UserSid;
+    }
+    [DllImport("wtsapi32.dll", EntryPoint = "WTSEnumerateProcessesW", SetLastError = true, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WTSEnumerateProcesses(IntPtr server, uint reserved, uint version, out IntPtr processes, out int count);
+    [DllImport("wtsapi32.dll", ExactSpelling = true)]
+    private static extern void WTSFreeMemory(IntPtr memory);
 
     public static async Task ClosePlayerClientsAsync()
     {

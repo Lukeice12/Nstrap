@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.10/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.1.11/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Preview binaries are not code signed.
 
 ## Features
 
@@ -35,11 +35,11 @@ Edits save automatically. File import replaces values and enabled states for mat
 
 Import accepts both a flat JSON flag map, such as `{"FFlagExample": true}`, and an array of records, such as `[{"name": "FFlagExample", "value": "True", "type": "bool", "enabled": true}]`. Flat maps enable all imported flags. Record arrays preserve each entry's `enabled` state, defaulting to enabled when it is omitted. Key bindings and cycling settings from other applications are not imported; N strap imports the listed flag values.
 
-Exported JSON remains a flat map containing enabled flags. **Replace profile** inside the JSON editor accepts the same import formats and replaces the profile's entries. Presets merge into the selected profile when chosen.
+The JSON editor opens a record array containing every flag, including disabled entries and draft values that need correction. **Replace profile** validates the edited document before replacing the profile's entries. Exported files remain a flat map containing enabled flags. Presets merge into the selected profile when chosen.
 
 In the JSON editor, press **Ctrl+F** to find text. Search ignores letter case and shows the match count. With the search box focused, use **Enter** for the next match and **Shift+Enter** for the previous match. **Escape** closes the search bar.
 
-**Unlock FPS** is on Overview and controls Roblox Player's global framerate setting independently of FastFlag profiles. It sets a high cap of 9,999 FPS; it cannot guarantee a particular framerate or override graphics-driver limits. If Player is running, the change waits until it closes. Keep N strap open to apply the pending change, or reopen N strap before launching Roblox. Turning the toggle off restores the recorded previous cap while preserving other Roblox settings. If the cap has since been changed elsewhere, that newer value is kept instead.
+**Unlock FPS** is on Overview and controls Roblox Player's global framerate setting independently of FastFlag profiles. It sets a high cap of 9,999 FPS; it cannot guarantee a particular framerate or override graphics-driver limits. If Player is running under your Windows account, the change waits until it closes, including sessions elsewhere on the same computer. Another Windows account's Player does not block the change. Keep N strap open to apply the pending change, or reopen N strap before launching Roblox. Turning the toggle off restores the recorded previous cap while preserving other Roblox settings. If the cap has since been changed elsewhere, that newer value is kept instead.
 
 ## Update N strap
 
@@ -100,6 +100,8 @@ Roblox accounts and game authentication stay with the official Roblox software. 
 Roblox loads these settings at startup. Applying a profile uses its enabled flag values. If a managed flag was changed elsewhere, its current value is saved as the new restore value before the profile's value is written. Removing a managed flag restores its recorded original value if it still matches what N strap wrote; a newer external value is left alone. Unrelated settings are preserved. Recovery's **Restore previous values** reports conflicts instead of replacing externally changed values. Settings backups and interrupted-write checks remain in place.
 
 App data lives in `%LOCALAPPDATA%\Nstrap`: `profiles.json` stores profiles, `backups` holds previous settings files, and `recovery` holds ownership and interrupted-operation records. Keep the recovery records if you want N strap to restore values it previously changed.
+
+Profile saves that would exceed the existing 10 MB loading limit are rejected before replacing the saved file. Applying flags also checks that the combined settings, including existing entries, stay within the reader's 5,000-entry limit.
 
 Unlock FPS changes the existing `FramerateCap` property in `%LOCALAPPDATA%\Roblox\GlobalBasicSettings_13.xml`. Its settings-file backups are stored in `backups\player-fps`, with ownership and interrupted-update records in `recovery`.
 

@@ -25,14 +25,16 @@ public static class AtomicFile
 
 public sealed class ProfileStore(string directory)
 {
+    public const int MaximumBytes = 10 * 1024 * 1024;
     public string DirectoryPath { get; } = Path.GetFullPath(directory);
     public string StatePath => Path.Combine(DirectoryPath, "profiles.json");
     public AppState Load()
     {
         if (!File.Exists(StatePath)) return AppState.Create();
-        var bytes = File.ReadAllBytes(StatePath);
-        if (bytes.Length > 10 * 1024 * 1024) throw new InvalidDataException("The profiles file exceeds the 10 MB limit.");
-        var state = JsonSerializer.Deserialize<AppState>(bytes, JsonDefaults.Options)
+        using var input = new FileStream(StatePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (input.Length > MaximumBytes)
+            throw new InvalidDataException($"The profiles file exceeds the 10 MB limit and has been preserved at {StatePath}. Make a backup copy, then reduce this file to 10 MB or less before reopening N strap.");
+        var state = JsonSerializer.Deserialize<AppState>(input, JsonDefaults.Options)
             ?? throw new InvalidDataException("The profiles file is empty.");
         if (state.SchemaVersion != 1) throw new InvalidDataException("This profiles file was created by an incompatible N strap version.");
         if (state.Profiles is null || state.CustomRoots is null || state.CustomRoots.Any(p => p is null)
@@ -43,5 +45,11 @@ public sealed class ProfileStore(string directory)
             throw new InvalidDataException("The profiles file contains duplicate identifiers.");
         return state;
     }
-    public void Save(AppState state) => AtomicFile.WriteJson(StatePath, state);
+    public void Save(AppState state)
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(state, JsonDefaults.Options);
+        if (bytes.Length > MaximumBytes)
+            throw new InvalidDataException("The profiles would exceed the 10 MB limit. This change was not saved; the existing profiles file was left untouched. Remove unneeded profiles or reduce their contents before saving.");
+        AtomicFile.Write(StatePath, bytes);
+    }
 }

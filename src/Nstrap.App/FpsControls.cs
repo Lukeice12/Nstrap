@@ -22,7 +22,7 @@ public partial class MainWindow
         try
         {
             // Waiting must not repeatedly disable the UI or replace other feedback.
-            if (OfficialClient.IsRunning(ClientKind.Player)) return;
+            if (OfficialClient.IsPlayerRunningForCurrentUser()) return;
         }
         catch (Exception ex)
         {
@@ -64,10 +64,10 @@ public partial class MainWindow
                 Model.QueueFpsChange(Model.UnlockFps);
             }
             bool enabled = Model.UnlockFps;
-            var result = await Task.Run(() => Model.FpsSettings.Change(enabled, () => OfficialClient.IsRunning(ClientKind.Player)));
+            var result = await Task.Run(() => Model.FpsSettings.Change(enabled, OfficialClient.IsPlayerRunningForCurrentUser));
             if (result.Deferred)
             {
-                Model.FpsStatus = "Pending — close Roblox Player to apply; keep N strap open.";
+                Model.FpsStatus = "Pending — close your account's Roblox Player sessions to apply; keep N strap open.";
                 _fpsTimer.Start();
                 Model.Success("FPS change queued.", Model.FpsStatus);
                 return Model.FpsStatus;

@@ -59,10 +59,12 @@ public static partial class FlagValidator
 
     public static List<FlagEntry> Import(string json) => ParseImport(json).Flags;
 
-    public static FlagImportDocument ParseImport(string json)
+    public static FlagImportDocument ParseImport(string json, int maximumBytes = MaximumBytes)
     {
+        if (maximumBytes <= 0 || maximumBytes > ProfileStore.MaximumBytes)
+            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
         var bytes = Encoding.UTF8.GetBytes(json);
-        using var document = ParseDocument(bytes);
+        using var document = ParseDocument(bytes, maximumBytes);
         var flags = new List<FlagEntry>();
         bool ignoredMetadata = false;
         if (document.RootElement.ValueKind == JsonValueKind.Object)
@@ -138,9 +140,10 @@ public static partial class FlagValidator
         _ => true
     };
 
-    private static JsonDocument ParseDocument(byte[] bytes)
+    private static JsonDocument ParseDocument(byte[] bytes, int maximumBytes = MaximumBytes)
     {
-        if (bytes.Length > MaximumBytes) throw new InvalidDataException("The settings file exceeds the 2 MB limit.");
+        if (bytes.Length > maximumBytes)
+            throw new InvalidDataException($"The settings JSON exceeds the {maximumBytes:N0}-byte limit.");
         var span = bytes.AsSpan();
         if (span.StartsWith(new byte[] { 0xef, 0xbb, 0xbf })) span = span[3..];
         return JsonDocument.Parse(span.ToArray(), new() { MaxDepth = 32 });

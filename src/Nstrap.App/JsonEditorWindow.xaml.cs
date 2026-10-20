@@ -1,4 +1,6 @@
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -18,8 +20,13 @@ public partial class JsonEditorWindow : Window
     public JsonEditorWindow(FlagProfile profile)
     {
         InitializeComponent();
-        try { Editor.Text = FlagValidator.Export(profile.Flags); Feedback.Text = "Enabled flags from your selected profile."; }
-        catch (Exception ex) { Editor.Text = "{}"; Error(ex); }
+        // Editing must preserve disabled entries and unfinished values verbatim.
+        // Validation belongs to Replace/Export, so invalid drafts remain correctable.
+        Editor.Text = JsonSerializer.Serialize(profile.Flags.Select(flag => new
+        {
+            name = flag.Name, value = flag.Value, enabled = flag.Enabled
+        }), JsonDefaults.Options);
+        Feedback.Text = "All flags, including disabled flags.";
         FindQuery.TextChanged += FindQueryChanged;
         Editor.TextChanged += EditorTextChanged;
         Editor.SelectionChanged += EditorSelectionChanged;
@@ -167,7 +174,7 @@ public partial class JsonEditorWindow : Window
 
     private void Error(Exception ex) { Feedback.Foreground = new SolidColorBrush(Color.FromRgb(255, 166, 145)); Feedback.Text = ex.Message; }
     private List<FlagEntry> Validate()
-        => ShowValidation(FlagValidator.ParseImport(Editor.Text));
+        => ShowValidation(FlagValidator.ParseImport(Editor.Text, ProfileStore.MaximumBytes));
 
     private List<FlagEntry> ShowValidation(FlagImportDocument document)
     {
@@ -201,9 +208,12 @@ public partial class JsonEditorWindow : Window
         try
         {
             var flags = Validate();
+            var bytes = Encoding.UTF8.GetBytes(FlagValidator.Export(flags));
+            if (bytes.Length > FlagValidator.MaximumBytes)
+                throw new InvalidDataException("The exported flags would exceed the 2 MB import limit. Export fewer enabled flags.");
             var dialog = new SaveFileDialog { Title = "Export FastFlags JSON", FileName = "ClientAppSettings.json", Filter = "JSON settings (*.json)|*.json", DefaultExt = ".json" };
             if (dialog.ShowDialog(this) != true) return;
-            AtomicFile.Write(dialog.FileName, System.Text.Encoding.UTF8.GetBytes(FlagValidator.Export(flags)));
+            AtomicFile.Write(dialog.FileName, bytes);
             Feedback.Text = $"Enabled flags exported as a flat JSON object. {ImportNotice}".TrimEnd();
         }
         catch (Exception ex) { Error(ex); }

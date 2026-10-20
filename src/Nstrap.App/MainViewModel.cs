@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
-    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.10";
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.11";
     public bool UnlockFps => State.UnlockFps;
     public bool FpsChangePending => State.FpsChangePending;
     public string FpsStatus { get => _fpsStatus; set => Set(ref _fpsStatus, value); }
@@ -91,7 +91,17 @@ public sealed partial class MainViewModel : Observable
         FlagsView = MakeView();
         foreach (var profile in Profiles) Observe(profile);
         Profiles.CollectionChanged += ProfilesChanged;
-        _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); try { Save(); } catch (Exception ex) { Error(ex); } };
+        _saveTimer.Tick += (_, _) =>
+        {
+            _saveTimer.Stop();
+            try { Save(); }
+            catch (Exception ex)
+            {
+                Error(ex);
+                Status = "Edits not saved.";
+                StatusDetail += " Your draft is still shown.";
+            }
+        };
         RefreshInstallations();
     }
     private ICollectionView MakeView()
@@ -131,6 +141,52 @@ public sealed partial class MainViewModel : Observable
     }
     private void ScheduleSave() { _saveTimer.Stop(); _saveTimer.Start(); }
     public void Save() { _saveTimer.Stop(); Store.Save(State); }
+    private void SaveChange(Action change, Action rollback)
+    {
+        try { change(); Save(); }
+        catch (Exception ex)
+        {
+            try { rollback(); }
+            finally { _saveTimer.Stop(); }
+            throw new IOException("The change was not saved; the previous profile state was restored. " + ex.Message, ex);
+        }
+    }
+    public void AddProfile(FlagProfile profile)
+    {
+        var previous = SelectedProfile;
+        var previousId = State.SelectedProfileId;
+        SaveChange(() => { Profiles.Add(profile); SelectedProfile = profile; },
+            () =>
+            {
+                SelectedProfile = previous;
+                State.SelectedProfileId = previousId;
+                Profiles.Remove(profile);
+            });
+    }
+    public void RenameSelectedProfile(string name)
+    {
+        var profile = SelectedProfile;
+        string previous = profile.Name;
+        SaveChange(() => profile.Name = name, () => profile.Name = previous);
+    }
+    public void DeleteSelectedProfile()
+    {
+        if (Profiles.Count <= 1) throw new InvalidOperationException("Keep at least one profile.");
+        var previous = SelectedProfile;
+        var previousId = State.SelectedProfileId;
+        int index = Profiles.IndexOf(previous);
+        SaveChange(() =>
+            {
+                SelectedProfile = Profiles.First(profile => profile != previous);
+                Profiles.Remove(previous);
+            },
+            () =>
+            {
+                if (!Profiles.Contains(previous)) Profiles.Insert(index, previous);
+                SelectedProfile = previous;
+                State.SelectedProfileId = previousId;
+            });
+    }
     public void QueueFpsChange(bool enabled)
     {
         bool oldEnabled = State.UnlockFps, oldPending = State.FpsChangePending;
@@ -147,22 +203,17 @@ public sealed partial class MainViewModel : Observable
         catch { State.FpsChangePending = true; throw; }
         finally { Changed(nameof(FpsChangePending)); }
     }
-    public void CommitImport(FlagImportPlan plan)
+    public void CommitFlags(IEnumerable<FlagEntry> flags)
     {
-        var previous = SelectedProfile.Flags.ToArray();
-        ReplaceFlags(plan.MergedFlags);
-        try { Save(); }
-        catch
-        {
-            ReplaceFlags(previous);
-            _saveTimer.Stop();
-            throw;
-        }
+        var profile = SelectedProfile;
+        var previous = profile.Flags.ToArray();
+        var replacement = flags.ToArray();
+        SaveChange(() => ReplaceFlags(profile, replacement), () => ReplaceFlags(profile, previous));
     }
-    private void ReplaceFlags(IEnumerable<FlagEntry> flags)
+    private static void ReplaceFlags(FlagProfile profile, IEnumerable<FlagEntry> flags)
     {
-        while (SelectedProfile.Flags.Count > 0) SelectedProfile.Flags.RemoveAt(SelectedProfile.Flags.Count - 1);
-        foreach (var flag in flags) SelectedProfile.Flags.Add(flag);
+        while (profile.Flags.Count > 0) profile.Flags.RemoveAt(profile.Flags.Count - 1);
+        foreach (var flag in flags) profile.Flags.Add(flag);
     }
     public void RefreshInstallations()
     {
