@@ -9,7 +9,6 @@
     <SolidColorBrush x:Key="TextBrush" Color="#F1F4FA"/>
     <SolidColorBrush x:Key="MutedBrush" Color="#9AA8BF"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#B7A4FF"/>
-    <SolidColorBrush x:Key="MintBrush" Color="#9EE8CB"/>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
     <Style TargetType="Window">
       <Setter Property="Background" Value="{StaticResource CanvasBrush}"/>
@@ -54,7 +53,7 @@
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value=".8"/></Trigger>
               <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value=".6"/></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value=".35"/></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource MintBrush}"/></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
@@ -141,13 +140,13 @@
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
         <StackPanel Orientation="Horizontal">
-          <Border x:Name="Box" Width="19" Height="19" CornerRadius="5" BorderThickness="1" BorderBrush="#67748A" Background="#111620" Margin="0,0,9,0">
-            <TextBlock x:Name="Tick" Text="✓" Foreground="#15261F" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+          <Border x:Name="Box" Width="19" Height="19" CornerRadius="2" BorderThickness="1" BorderBrush="#67748A" Background="#111620" Margin="0,0,9,0">
+            <TextBlock x:Name="Tick" Text="✓" Foreground="#151126" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
           </Border>
           <ContentPresenter VerticalAlignment="Center"/>
         </StackPanel>
         <ControlTemplate.Triggers>
-          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="{StaticResource MintBrush}"/><Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource MintBrush}"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}"/><Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>

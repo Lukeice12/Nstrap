@@ -19,7 +19,7 @@ public partial class JsonEditorWindow : Window
     private List<FlagEntry> Validate()
     {
         var flags = FlagValidator.Import(Editor.Text);
-        Feedback.Foreground = (Brush)FindResource("MintBrush");
+        Feedback.Foreground = (Brush)FindResource("MutedBrush");
         Feedback.Text = $"Valid JSON · {flags.Count} flags. All entries can be applied.";
         return flags;
     }

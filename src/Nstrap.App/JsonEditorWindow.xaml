@@ -5,11 +5,11 @@
   <Grid Background="{StaticResource CanvasBrush}">
   <Grid Margin="26">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <StackPanel Margin="0,0,0,20"><TextBlock Text="The whole picture." FontSize="26" FontWeight="SemiBold"/>
+    <StackPanel Margin="0,0,0,20"><TextBlock Text="JSON editor" FontSize="26" FontWeight="SemiBold"/>
       <TextBlock Text="Edit or import a flat JSON object. Replace profile enables every imported entry. Export includes enabled flags only; disabled entries stay in the profile until you replace it." Style="{StaticResource Muted}" FontSize="12" Margin="0,9,0,0"/>
     </StackPanel>
     <TextBox x:Name="Editor" Grid.Row="1" AcceptsReturn="True" AcceptsTab="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Cascadia Mono, Consolas" FontSize="13" Padding="16" VerticalContentAlignment="Top" AutomationProperties.Name="Flag JSON"/>
-    <TextBlock x:Name="Feedback" Grid.Row="2" Foreground="{StaticResource MintBrush}" TextWrapping="Wrap" Margin="0,14,0,14"/>
+    <TextBlock x:Name="Feedback" Grid.Row="2" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,14,0,14"/>
     <DockPanel Grid.Row="3"><StackPanel Orientation="Horizontal" DockPanel.Dock="Right"><Button Content="Cancel" IsCancel="True" Style="{StaticResource Quiet}" Margin="0,0,8,0"/><Button Content="Replace profile" Style="{StaticResource Primary}" Click="ReplaceClick"/></StackPanel>
       <StackPanel Orientation="Horizontal"><Button Content="Import file" Click="ImportClick" Margin="0,0,8,0"/><Button Content="Export file" Click="ExportClick" Margin="0,0,8,0"/><Button Content="Validate" Click="ValidateClick"/></StackPanel>
     </DockPanel>

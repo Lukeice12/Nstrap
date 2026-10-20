@@ -12,7 +12,7 @@ public sealed class MainViewModel : Observable
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private FlagProfile _selectedProfile;
     private RobloxInstallation? _selectedInstallation;
-    private string _search = "", _status = "Ready when you are.", _statusDetail = "Everything stays on this device.";
+    private string _search = "", _status = "Ready", _statusDetail = "";
     private bool _isBusy, _hasError;
     private int _page;
     public ProfileStore Store { get; }
@@ -23,12 +23,13 @@ public sealed class MainViewModel : Observable
     public IReadOnlyList<FlagPreset> Presets => FlagCatalog.Presets;
     public ICollectionView FlagsView { get; private set; }
     public string DataDirectory => Store.DirectoryPath;
+    public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.1";
     public string CatalogDate => FlagCatalog.CheckedOn;
     public string FlagSummary => $"{SelectedProfile.Flags.Count(f => f.Enabled)} enabled · {SelectedProfile.Flags.Count} total";
     public string ProfileSummary => $"{Profiles.Count} local profile{(Profiles.Count == 1 ? "" : "s")}";
     public string InstallationSummary => Installations.Count == 0 ? "No clients found" : $"{Installations.Count} client{(Installations.Count == 1 ? "" : "s")} detected";
-    public string ClientTitle => SelectedInstallation is null ? "Connect your Roblox" : $"Roblox {SelectedInstallation.Kind}";
-    public string ClientDetail => SelectedInstallation is null ? "Install Player or choose an existing installation to get started." : SelectedInstallation.Version;
+    public string ClientTitle => SelectedInstallation is null ? "No client selected" : $"Roblox {SelectedInstallation.Kind}";
+    public string ClientDetail => SelectedInstallation is null ? "Install Player or choose an installation folder." : SelectedInstallation.Version;
     public string ClientPath => SelectedInstallation?.DirectoryPath ?? "No installation selected";
     public bool HasInstallation => SelectedInstallation is not null;
     public bool EmptyFlags => SelectedProfile.Flags.Count == 0;
@@ -133,7 +134,7 @@ public sealed class MainViewModel : Observable
             ?? Installations.FirstOrDefault();
         Changed(nameof(InstallationSummary));
     }
-    public void Success(string title, string detail = "Changes are saved locally.")
+    public void Success(string title, string detail = "")
     {
         HasError = false; Status = title; StatusDetail = detail;
     }

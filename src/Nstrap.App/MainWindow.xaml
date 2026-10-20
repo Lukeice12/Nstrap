@@ -35,10 +35,9 @@
           <Border Width="40" Height="40" Background="{StaticResource AccentBrush}" CornerRadius="11">
             <Path Data="M 11,29 L 11,11 L 16,11 L 25,23 L 25,11 L 30,11 L 30,29 L 25,29 L 16,17 L 16,29 Z" Fill="#19132F" Stretch="None"/>
           </Border>
-          <StackPanel Margin="12,-1,0,0"><TextBlock Text="N strap" FontSize="23" FontWeight="SemiBold"/><TextBlock Text="YOUR CLIENT. YOUR WAY." FontSize="8" Foreground="{StaticResource MutedBrush}" Margin="1,2,0,0"/></StackPanel>
+          <TextBlock Text="N strap" FontSize="23" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Grid.Row="1">
-          <TextBlock Text="WORKSPACE" Style="{StaticResource Eyebrow}" Foreground="#65738C" Margin="16,0,0,16"/>
           <RadioButton x:Name="HomeNav" Style="{StaticResource NavButton}" IsChecked="True" Tag="0" Checked="Navigate">
             <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="Overview" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
           </RadioButton>
@@ -55,12 +54,7 @@
             <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Width="29" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/><TextBlock Text="About &amp; settings" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/></StackPanel>
           </RadioButton>
         </StackPanel>
-        <Border Grid.Row="3" Background="#191F2C" CornerRadius="10" Padding="15">
-          <StackPanel><StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="{StaticResource MintBrush}" Margin="0,0,7,0"/><TextBlock Text="Local by design" FontWeight="SemiBold" FontSize="12"/></StackPanel>
-            <TextBlock Text="No account. No telemetry." Style="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0"/>
-            <TextBlock Text="N STRAP   /   0.1.0" FontSize="10" Foreground="#67758D" Margin="0,13,0,0"/>
-          </StackPanel>
-        </Border>
+        <TextBlock Grid.Row="3" Text="{Binding AppVersion, StringFormat=Version {0}}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="16,0,0,0"/>
       </Grid>
     </Border>
     <Grid Grid.Column="1">
@@ -70,37 +64,29 @@
         <TabItem>
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="36,31,36,28">
-              <DockPanel><Border DockPanel.Dock="Right" VerticalAlignment="Center" CornerRadius="12" BorderBrush="#354336" BorderThickness="1" Background="#17271F" Padding="11,5"><TextBlock Text="PERSONAL WORKSPACE" Foreground="{StaticResource MintBrush}" FontSize="10" FontWeight="SemiBold"/></Border>
-                <StackPanel><TextBlock Text="Overview" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="A little more control. A lot less friction." Style="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
-              </DockPanel>
-              <Border CornerRadius="16" Padding="28" Margin="0,28,0,20" BorderThickness="1" BorderBrush="#413759">
-                <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#302743" Offset="0"/><GradientStop Color="#181D2D" Offset="1"/></LinearGradientBrush></Border.Background>
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="130"/></Grid.ColumnDefinitions>
-                  <StackPanel><TextBlock Text="READY FOR YOUR NEXT SESSION" Style="{StaticResource Eyebrow}"/><TextBlock Text="Make room for play." FontSize="34" FontWeight="SemiBold" Margin="0,13,0,10"/>
-                    <TextBlock Text="Choose your client, shape your settings, and jump in." Foreground="#C4BCD4" TextWrapping="Wrap" Margin="0,0,0,24"/>
-                    <WrapPanel><Button Content="Launch Roblox   ↗" Style="{StaticResource Primary}" Click="LaunchClick" Padding="21,12" Margin="0,0,10,0"/><Button Content="Apply profile" Click="ApplyClick" Padding="21,12"/></WrapPanel>
-                  </StackPanel>
-                  <Viewbox Grid.Column="1" Width="110" Height="110" Opacity=".85">
-                    <Canvas Width="100" Height="100"><Path Data="M 10,78 L 10,22 L 26,22 L 62,65 L 62,22 L 78,22 L 78,78 L 62,78 L 26,35 L 26,78 Z" Fill="#AA93EA"/><Path Data="M 84,22 L 91,22 L 91,78 L 84,78 Z" Fill="#99D7C5"/></Canvas>
-                  </Viewbox>
-                </Grid>
+              <TextBlock Text="Overview" FontSize="28" FontWeight="SemiBold"/>
+              <Border Style="{StaticResource Card}" Margin="0,26,0,20">
+                <DockPanel>
+                  <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="20,0,0,0"><Button Content="Launch Roblox" Style="{StaticResource Primary}" Click="LaunchClick" Margin="0,0,10,0"/><Button Content="Apply profile" Click="ApplyClick"/></WrapPanel>
+                  <StackPanel><TextBlock Text="Launch" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedProfileName, StringFormat=Profile: {0}}" Style="{StaticResource Muted}" Margin="0,8,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></StackPanel>
+                </DockPanel>
               </Border>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}"><StackPanel>
-                  <TextBlock Text="ACTIVE PROFILE" Style="{StaticResource Eyebrow}"/>
+                  <TextBlock Text="Profile" FontSize="16" FontWeight="SemiBold"/>
                   <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" Margin="0,16,0,12"/>
                   <TextBlock Text="{Binding FlagSummary}" Style="{StaticResource Muted}"/>
                   <Button Content="Manage FastFlags   →" HorizontalAlignment="Left" Style="{StaticResource Quiet}" Padding="0,15,0,0" Click="GoFlags"/>
                 </StackPanel></Border>
                 <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel>
-                  <TextBlock Text="CLIENT STATUS" Style="{StaticResource Eyebrow}"/>
+                  <TextBlock Text="Client" FontSize="16" FontWeight="SemiBold"/>
                   <TextBlock Text="{Binding ClientTitle}" FontSize="21" FontWeight="SemiBold" Margin="0,17,0,10"/>
                   <TextBlock Text="{Binding ClientDetail}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding ClientPath}"/>
                   <Button Content="Refresh installations   ↻" HorizontalAlignment="Left" Style="{StaticResource Quiet}" Padding="0,15,0,0" Click="RefreshClick"/>
                 </StackPanel></Border>
               </Grid>
               <Border Style="{StaticResource Card}" Margin="0,20,0,0">
-                <StackPanel><DockPanel><TextBlock Text="Your installation" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallationSummary}" Style="{StaticResource Muted}" HorizontalAlignment="Right"/></DockPanel>
+                <StackPanel><DockPanel><TextBlock Text="Installation" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding InstallationSummary}" Style="{StaticResource Muted}" HorizontalAlignment="Right"/></DockPanel>
                   <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <ComboBox ItemsSource="{Binding Installations}" SelectedItem="{Binding SelectedInstallation}" DisplayMemberPath="DisplayName" ToolTip="{Binding ClientPath}"/>
                     <Button Grid.Column="1" Content="Choose folder" Click="ChooseFolderClick" Margin="10,0,0,0"/>
@@ -116,7 +102,7 @@
           <Grid Margin="36,31,36,26">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <DockPanel><Button DockPanel.Dock="Right" Content="Apply profile" Style="{StaticResource Primary}" VerticalAlignment="Top" Click="ApplyClick"/>
-              <StackPanel><TextBlock Text="FastFlags" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Your profiles, down to the last flag." Style="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
+              <TextBlock Text="FastFlags" FontSize="28" FontWeight="SemiBold"/>
             </DockPanel>
             <Border Grid.Row="1" Style="{StaticResource Card}" Padding="18" Margin="0,25,0,18">
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -149,22 +135,20 @@
                   </DataGrid.Columns>
                 </DataGrid>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding EmptyFlags, Converter={StaticResource BoolVisibility}}" IsHitTestVisible="False" Margin="24">
-                  <TextBlock Text="{}{ }" Foreground="{StaticResource AccentBrush}" FontFamily="Consolas" FontSize="40" HorizontalAlignment="Center"/>
-                  <TextBlock Text="Start with a clean slate." FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,8"/>
-                  <TextBlock Text="Add a flag, paste JSON, or pick a preset." Style="{StaticResource Muted}" TextAlignment="Center"/>
+                  <TextBlock Text="No flags in this profile" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                  <TextBlock Text="Add a flag, import JSON, or choose a preset." Style="{StaticResource Muted}" TextAlignment="Center"/>
                 </StackPanel>
               </Grid>
             </Border>
-            <StackPanel Grid.Row="4" Margin="0,15,0,0"><DockPanel><TextBlock Text="{Binding FlagSummary}" Foreground="{StaticResource MintBrush}" FontSize="12"/><TextBlock Text="Drafts save automatically" Foreground="{StaticResource MutedBrush}" FontSize="12" HorizontalAlignment="Right"/></DockPanel>
+            <StackPanel Grid.Row="4" Margin="0,15,0,0"><DockPanel><TextBlock Text="{Binding FlagSummary}" Foreground="{StaticResource MutedBrush}" FontSize="12"/><TextBlock Text="Drafts save automatically" Foreground="{StaticResource MutedBrush}" FontSize="12" HorizontalAlignment="Right"/></DockPanel>
               <TextBlock Text="All valid flags can be applied. Support labels describe Roblox Player's published allowlist; Studio has no local allowlist. Actual behavior depends on Roblox." Style="{StaticResource Muted}" FontSize="11" Margin="0,10,0,0"/>
             </StackPanel>
           </Grid>
         </TabItem>
         <TabItem>
           <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
-            <TextBlock Text="A useful starting point." FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="Small, readable presets. Every flag stays yours to edit." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
-            <Border Background="#1D2630" CornerRadius="10" Padding="16" Margin="0,25,0,22"><TextBlock Text="Presets merge into your selected profile and enable their flags. Apply the profile when you are ready. These are configuration requests, not measured performance promises." Style="{StaticResource Muted}"/></Border>
+            <TextBlock Text="Presets" FontSize="28" FontWeight="SemiBold"/>
+            <TextBlock Text="Adding a preset merges and enables its flags in the selected profile. Apply the profile to use them." Style="{StaticResource Muted}" Margin="0,12,0,24"/>
             <ItemsControl ItemsSource="{Binding Presets}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate><DataTemplate>
@@ -181,49 +165,45 @@
         </TabItem>
         <TabItem>
           <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
-            <TextBlock Text="A way back, built in." FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="Settings changes should be easy to undo." Style="{StaticResource Muted}" Margin="0,6,0,28"/>
+            <TextBlock Text="Recovery" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,26"/>
             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Restore managed settings" FontSize="22" FontWeight="SemiBold"/>
               <TextBlock Text="Remove the flags N strap applied to the selected installation. If a flag already had a value, that original value returns. Unmanaged settings are preserved." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
               <ComboBox ItemsSource="{Binding Installations}" SelectedItem="{Binding SelectedInstallation}" DisplayMemberPath="DisplayName" Margin="0,0,0,20"/>
               <Button Content="Restore previous values" HorizontalAlignment="Left" Click="RestoreClick"/>
             </StackPanel></Border>
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Your backups" FontSize="22" FontWeight="SemiBold"/>
-              <TextBlock Text="Before changing an existing ClientAppSettings.json, N strap saves a complete timestamped copy. Backups and recovery records stay on your computer." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Backups" FontSize="22" FontWeight="SemiBold"/>
+              <TextBlock Text="A timestamped copy of ClientAppSettings.json is saved before each change to an existing settings file." Style="{StaticResource Muted}" Margin="0,14,0,20"/>
               <Button Content="Open backups folder   ↗" HorizontalAlignment="Left" Click="BackupsClick"/>
             </StackPanel></Border>
-            <Border Background="#1C2430" CornerRadius="10" Padding="20" Margin="0,20,0,0"><StackPanel>
-              <TextBlock Text="Outside edits are respected" Foreground="{StaticResource MintBrush}" FontWeight="SemiBold"/>
-              <TextBlock Text="If another tool changes a managed flag, N strap pauses the write and explains the conflict. Original values and full backups remain available for review." Style="{StaticResource Muted}" Margin="0,8,0,0"/>
-            </StackPanel></Border>
+            <TextBlock Text="If another tool changes a managed flag, applying or restoring stops with a conflict message. Use the backups to review the original values." Style="{StaticResource Muted}" Margin="0,20,0,0"/>
           </StackPanel></ScrollViewer>
         </TabItem>
         <TabItem>
           <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="36,31,36,28">
-            <TextBlock Text="Thoughtfully simple." FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="An independent home for your Roblox configuration." Style="{StaticResource Muted}" Margin="0,6,0,28"/>
+            <TextBlock Text="About &amp; settings" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,26"/>
             <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Launch behavior" FontSize="21" FontWeight="SemiBold"/>
               <CheckBox Content="Apply the selected profile before launching" IsChecked="{Binding ApplyBeforeLaunch}" Margin="0,21,0,10"/>
               <TextBlock Text="Close the selected Roblox client before applying flags. Updates can replace installation folders; refresh and apply to the new version." Style="{StaticResource Muted}" FontSize="12" Margin="0,10,0,0"/>
             </StackPanel></Border>
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Stored on your device" FontSize="21" FontWeight="SemiBold"/>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="Data folder" FontSize="21" FontWeight="SemiBold"/>
               <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource Muted}" FontSize="12" Margin="0,14,0,18"/>
               <Button Content="Open data folder   ↗" Click="DataFolderClick" HorizontalAlignment="Left"/>
-              <TextBlock Text="No telemetry, credentials, background service, or protocol takeover. Installer downloads come from Roblox over HTTPS and must pass Windows signature and publisher verification." Style="{StaticResource Muted}" FontSize="12" Margin="0,20,0,0"/>
             </StackPanel></Border>
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="N strap  0.1.0" FontSize="21" FontWeight="SemiBold"/>
-              <TextBlock Text="An original, independent Windows launcher. N strap is not affiliated with or endorsed by Roblox Corporation. Roblox controls which local flags its clients honor." Style="{StaticResource Muted}" Margin="0,14,0,18"/>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0"><StackPanel><TextBlock Text="{Binding AppVersion, StringFormat=N strap {0}}" FontSize="21" FontWeight="SemiBold"/>
+              <TextBlock Text="N strap is not affiliated with Roblox Corporation. Roblox determines which local flags its clients honor." Style="{StaticResource Muted}" Margin="0,14,0,18"/>
               <WrapPanel><Button Content="Roblox flag documentation   ↗" Click="DocsClick" Margin="0,0,12,0"/><Button Content="Roblox support   ↗" Style="{StaticResource Quiet}" Click="SupportClick"/></WrapPanel>
               <TextBlock Text="{Binding CatalogDate, StringFormat=Support catalog checked {0}}" Foreground="#6E7D94" FontSize="11" Margin="0,15,0,0"/>
             </StackPanel></Border>
           </StackPanel></ScrollViewer>
         </TabItem>
       </TabControl>
-      <Border Grid.Row="1" Background="#131923" BorderBrush="#252D3D" BorderThickness="0,1,0,0" Padding="24,14" MinHeight="70">
-        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
-          <Ellipse Width="6" Height="6" VerticalAlignment="Top" Margin="0,7,0,0"><Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Fill" Value="{StaticResource MintBrush}"/><Style.Triggers><DataTrigger Binding="{Binding HasError}" Value="True"><Setter Property="Fill" Value="#FFA691"/></DataTrigger></Style.Triggers></Style></Ellipse.Style></Ellipse>
-          <StackPanel Grid.Column="1"><TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/><TextBlock Text="{Binding StatusDetail}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="70"/></StackPanel>
-          <ProgressBar Grid.Column="2" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolVisibility}}" Height="3" Background="#293044" Foreground="{StaticResource AccentBrush}" Margin="15,0,0,0"/>
+      <Border Grid.Row="1" Background="#131923" BorderBrush="#252D3D" BorderThickness="0,1,0,0" Padding="24,12" MinHeight="45">
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/><Style.Triggers><DataTrigger Binding="{Binding HasError}" Value="True"><Setter Property="Foreground" Value="#FFA691"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+            <TextBlock Text="{Binding StatusDetail}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="70"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding StatusDetail}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+          </StackPanel>
+          <ProgressBar Grid.Column="1" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolVisibility}}" Height="3" Background="#293044" Foreground="{StaticResource AccentBrush}" Margin="15,0,0,0"/>
         </Grid>
       </Border>
     </Grid>
