@@ -60,6 +60,11 @@ public sealed class AppState
     public string Theme { get; set; } = "Crimson";
     public string DisplayName { get; set; } = "N strap";
     public string? CustomIconFile { get; set; }
+    public bool KillSwitchEnabled { get; set; }
+    public HotkeyBinding? KillSwitchHotkey { get; set; }
+    public bool NukeEnabled { get; set; }
+    public HotkeyBinding? NukeHotkey { get; set; }
+    public bool NukeScopeAcknowledged { get; set; }
     public bool UnlockFps { get; set; }
     public int FpsCap { get; set; } = FpsSettingsManager.UnlockedCap;
     public bool FpsChangePending { get; set; }
@@ -70,6 +75,23 @@ public sealed class AppState
     {
         var profile = new FlagProfile { Name = "Default" };
         return new() { Profiles = [profile], SelectedProfileId = profile.Id };
+    }
+}
+
+public sealed record HotkeyBinding(uint Modifiers, uint VirtualKey)
+{
+    public void Validate()
+    {
+        // Win32 MOD_ALT / MOD_CONTROL / MOD_SHIFT. Windows combinations and F12
+        // are reserved by Windows; require Ctrl or Alt to avoid ordinary typing.
+        if ((Modifiers & ~7u) != 0 || (Modifiers & 3u) == 0)
+            throw new InvalidDataException("Use Ctrl or Alt with another key. Windows-key shortcuts are reserved.");
+        if (!(VirtualKey is 0x08 or 0x09 or 0x0D or 0x20
+            or >= 0x21 and <= 0x28 or 0x2D or 0x2E
+            or >= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A
+            or >= 0x60 and <= 0x7A or >= 0x7C and <= 0x87
+            or >= 0xBA and <= 0xC0 or >= 0xDB and <= 0xDE))
+            throw new InvalidDataException("Choose a letter, number, function key other than F12, or a navigation key.");
     }
 }
 

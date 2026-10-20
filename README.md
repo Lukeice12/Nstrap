@@ -8,7 +8,7 @@ N strap is an original implementation. Its application code uses .NET and Window
 
 ## Download
 
-Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.3/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
+Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/download/v0.2.4/Nstrap-win-x64.zip), choose **Extract All**, and open **Nstrap.exe**. The ZIP contains just that executable and includes the .NET runtime; no separate .NET installation is needed. See [Releases](https://github.com/Lukeice12/Nstrap/releases) for version notes. Release binaries are not code signed.
 
 ## Features
 
@@ -23,6 +23,7 @@ Download [Nstrap-win-x64.zip](https://github.com/Lukeice12/Nstrap/releases/downl
 - Choose Crimson, Dark, or Light in **Appearance**, with Crimson as the default.
 - Matching title bars across the main window, editor, prompts, and license viewer.
 - Customize the app's displayed name, window icon, and executable/process name.
+- Configure optional global **Kill switch** and **Nuke** shortcuts in **Experimental**.
 - Manually clear old Roblox cache files to free disk space.
 - Enter arbitrary valid FastFlag names and values. **N strap does not enforce a flag allowlist or blocklist.**
 - Apply profiles to an installed client with backups and recovery information.
@@ -85,6 +86,19 @@ The display name changes the window title and sidebar. Choose a custom PNG or IC
 
 The process name changes the executable's filename and the image name in Task Manager's **Details** tab. It requires a restart and a writable local app folder. The new name must not already exist in that folder. The original executable is removed only after the renamed copy opens successfully; shortcuts pointing to the old filename need updating. Automatic updates preserve the chosen filename. The compiled file description and Explorer executable icon remain N strap's.
 
+### Experimental shortcuts
+
+**Experimental** provides two optional global shortcuts. Both start disabled with no key assigned. They work while N strap is running, including when another app has focus.
+
+- **Kill switch** immediately closes N strap without saving pending edits or showing a confirmation. It leaves Roblox running.
+- **Nuke** closes N strap silently and starts removal of the running portable executable and this Windows account's N strap data: profiles, settings, custom icons, backups, recovery records, and update cache. It first attempts to restore managed Roblox settings where this can be done safely, preserving changes made outside N strap.
+
+Click **Record shortcut**, press Ctrl or Alt with another key, then **Save shortcut** and enable the action. Nuke also requires accepting its deletion scope. Choose different shortcuts for the two actions. Configuration errors appear in Experimental; pressing an armed shortcut does not open a confirmation or progress window.
+
+Nuke permanently deletes saved profiles. It prepares a background helper while enabled and pauses during app updates or executable renames, then re-arms after restart. Turning it off or closing the app normally cancels removal.
+
+Cleanup is limited to N strap's own files. Copies and downloads elsewhere, Windows records, restore points, and the main app's .NET runtime extraction cache are outside its scope. Locked or redirected files can remain. Roblox settings may also remain if a client is running, their current values have changed elsewhere, or recovery information cannot be used safely.
+
 ## Update N strap
 
 Open **Updates** to see the installed version, change **Update automatically**, or choose **Check for updates**. Automatic updates are enabled by default. When a newer release is available at startup, N strap downloads it and restarts into the updated app. Manual checks let you choose **Install and restart**.
@@ -123,7 +137,7 @@ dotnet publish src/Nstrap.App/Nstrap.App.csproj `
 
 Run `artifacts/Nstrap-win-x64/Nstrap.exe`. A self-contained publish includes the .NET runtime.
 
-Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.3`. Keep release notes to a few short bullets describing what changed.
+Publish GitHub releases as regular releases, with the newest version marked **Latest**. Use simple version tags and titles such as `v0.2.4`. Keep release notes to a few short bullets describing what changed.
 
 On the initial development machine, the verified SDK is stored locally at `.tools/dotnet/dotnet.exe`. Replace `dotnet` in the commands above with `.\.tools\dotnet\dotnet.exe` if it is not on your PATH. Downloaded tools and build output are excluded from Git.
 

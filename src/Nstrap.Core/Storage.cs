@@ -56,6 +56,14 @@ public sealed class ProfileStore(string directory)
     }
     private static void ValidatePreferences(AppState state)
     {
+        state.KillSwitchHotkey?.Validate();
+        state.NukeHotkey?.Validate();
+        if (state.KillSwitchEnabled && state.KillSwitchHotkey is null)
+            throw new InvalidDataException("The enabled kill switch needs a shortcut.");
+        if (state.NukeEnabled && (state.NukeHotkey is null || !state.NukeScopeAcknowledged))
+            throw new InvalidDataException("Nuke needs a shortcut and acceptance of its removal scope.");
+        if (state.KillSwitchHotkey is not null && state.KillSwitchHotkey == state.NukeHotkey)
+            throw new InvalidDataException("Kill switch and Nuke must use different shortcuts.");
         if (state.Theme is not ("Crimson" or "Dark" or "Light"))
             throw new InvalidDataException("The saved appearance theme must be Crimson, Dark or Light. The profiles file was preserved.");
         if (string.IsNullOrWhiteSpace(state.DisplayName) || state.DisplayName.Length > 48 || state.DisplayName.Any(char.IsControl))

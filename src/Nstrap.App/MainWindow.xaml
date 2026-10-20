@@ -93,6 +93,7 @@
           <RadioButton x:Name="PresetsNav" Style="{StaticResource NavButton}" Tag="2" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Presets"/></StackPanel></RadioButton>
           <RadioButton x:Name="RecoveryNav" Style="{StaticResource NavButton}" Tag="3" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Recovery"/></StackPanel></RadioButton>
           <RadioButton x:Name="AppearanceNav" Style="{StaticResource NavButton}" Tag="6" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Appearance"/></StackPanel></RadioButton>
+          <RadioButton x:Name="ExperimentalNav" Style="{StaticResource NavButton}" Tag="7" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9CE;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Experimental"/></StackPanel></RadioButton>
           <RadioButton x:Name="SettingsNav" Style="{StaticResource NavButton}" Tag="4" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="About &amp; settings"/></StackPanel></RadioButton>
           <RadioButton x:Name="UpdatesNav" Style="{StaticResource NavButton}" Tag="5" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Updates"/></StackPanel></RadioButton>
         </StackPanel>
@@ -451,6 +452,58 @@
                 <TextBlock Text="PNG or ICO, up to 4 MB. A copy is kept with your settings. The executable's icon in File Explorer stays unchanged." Style="{StaticResource Muted}" Margin="0,10,0,0"/>
               </StackPanel>
             </Grid></Border>
+          </StackPanel></ScrollViewer>
+        </TabItem>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28,25,28,28">
+            <TextBlock Text="Experimental" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Optional global shortcuts. They work in other apps while N strap is running." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+            <TextBlock Text="Kill switch" Style="{StaticResource SectionTitle}"/>
+            <Border Style="{StaticResource Card}"><StackPanel>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Close immediately" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="Closes N strap silently, including during an operation. Unsaved drafts may be lost." Style="{StaticResource SettingDescription}"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding KillSwitchEnabled, Mode=OneWay}" Tag="KillSwitch" Click="EmergencyEnabledClick" AutomationProperties.Name="Enable kill switch"/>
+              </Grid>
+              <TextBlock Text="{Binding KillSwitchShortcut}" FontSize="16" Margin="0,16,0,10" AutomationProperties.Name="Kill switch shortcut"/>
+              <WrapPanel>
+                <Button Content="{Binding KillSwitchCaptureLabel}" Tag="KillSwitch" Click="RecordShortcutClick" Margin="0,0,8,6"/>
+                <Button Content="Save shortcut" Tag="KillSwitch" Click="SaveShortcutClick" IsEnabled="{Binding CanSaveKillSwitchShortcut}" Margin="0,0,8,6"/>
+                <Button Content="Clear" Tag="KillSwitch" Click="ClearShortcutClick" Margin="0,0,0,6"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding KillSwitchStatus}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding KillSwitchError}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasKillSwitchError, Converter={StaticResource BoolVisibility}}"/>
+            </StackPanel></Border>
+            <TextBlock Text="Nuke" Style="{StaticResource SectionTitle}"/>
+            <Border Style="{StaticResource Card}"><StackPanel>
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,20,0">
+                  <TextBlock Text="Remove N strap" Style="{StaticResource SettingLabel}"/>
+                  <TextBlock Text="The shortcut closes the app and starts removal silently, with no confirmation or progress window." Style="{StaticResource SettingDescription}"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding NukeEnabled, Mode=OneWay}" Tag="Nuke" Click="EmergencyEnabledClick" AutomationProperties.Name="Enable Nuke removal shortcut"/>
+              </Grid>
+              <TextBlock Text="{Binding NukeScopeDescription}" Style="{StaticResource SettingDescription}" Margin="0,12,0,0"/>
+              <TextBlock Text="Executable" Style="{StaticResource SettingLabel}" FontSize="12" Margin="0,12,0,0"/>
+              <TextBlock Text="{Binding RemovalExecutablePath}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+              <TextBlock Text="Saved data" Style="{StaticResource SettingLabel}" FontSize="12" Margin="0,8,0,0"/>
+              <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+              <CheckBox IsChecked="{Binding NukeAcknowledged}" IsEnabled="{Binding CanChangeNukeAcknowledgement}" Margin="0,14,0,0" AutomationProperties.Name="Accept permanent removal of N strap and saved data">
+                <TextBlock Text="I understand that this permanently deletes the app and its saved data." TextWrapping="Wrap"/>
+              </CheckBox>
+              <TextBlock Text="{Binding NukeShortcut}" FontSize="16" Margin="0,16,0,10" AutomationProperties.Name="Nuke shortcut"/>
+              <WrapPanel>
+                <Button Content="{Binding NukeCaptureLabel}" Tag="Nuke" Click="RecordShortcutClick" Margin="0,0,8,6"/>
+                <Button Content="Save shortcut" Tag="Nuke" Click="SaveShortcutClick" IsEnabled="{Binding CanSaveNukeShortcut}" Margin="0,0,8,6"/>
+                <Button Content="Clear" Tag="Nuke" Click="ClearShortcutClick" Margin="0,0,0,6"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding NukeStatus}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding NukeError}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasNukeError, Converter={StaticResource BoolVisibility}}"/>
+            </StackPanel></Border>
+            <TextBlock Text="To record, press Ctrl or Alt with another key. Escape cancels. Windows-key shortcuts and F12 are reserved. Choose different shortcuts for each action." Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+            <TextBlock Text="Nuke pauses during updates and executable renames, then resumes after restart." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
           </StackPanel></ScrollViewer>
         </TabItem>
       </TabControl>

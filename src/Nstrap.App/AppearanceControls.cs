@@ -33,10 +33,19 @@ public partial class MainWindow
     {
         string name = AppIdentity.NormalizeProcessName(Model.ProcessNameDraft);
         if (AppIdentity.NameIsCurrent(name)) return;
-        Model.Save();
-        Model.Success("Preparing the new program name…", "The program will restart when the renamed copy is ready.");
-        await Task.Run(() => AppIdentity.StartRenameAsync(name));
-        _updateHandoff = true;
-        Application.Current.Shutdown();
+        try
+        {
+            Model.Save();
+            await SuspendNukeForRestartAsync();
+            Model.Success("Preparing the new program name…", "The program will restart when the renamed copy is ready.");
+            await Task.Run(() => AppIdentity.StartRenameAsync(name));
+            _updateHandoff = true;
+            Application.Current.Shutdown();
+        }
+        catch
+        {
+            await ResumeNukeAfterFailedRestartAsync();
+            throw;
+        }
     });
 }

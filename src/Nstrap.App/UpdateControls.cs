@@ -28,6 +28,7 @@ public partial class MainWindow
 {
     private AppRelease? _availableRelease;
     private bool _updateHandoff;
+    private bool _startupAcknowledged;
 
     private async Task<bool> StartupUpdatesAsync()
     {
@@ -39,6 +40,7 @@ public partial class MainWindow
             try
             {
                 UpdateHandoff.AcknowledgeStartup(restart, app.UpdateRolledBack);
+                _startupAcknowledged = true;
                 Model.UpdateStatus = UpdateHandoff.ReadStatus().Message;
                 if (app.UpdateRolledBack) UpdatesNav.IsChecked = true;
             }
@@ -98,6 +100,7 @@ public partial class MainWindow
         try
         {
             Model.Save();
+            await SuspendNukeForRestartAsync();
             var progress = new Progress<string>(message => Model.UpdateStatus = message);
             var ticket = await Task.Run(() => UpdateHandoff.PrepareAsync(_availableRelease, progress));
             Model.Save();
@@ -106,7 +109,11 @@ public partial class MainWindow
             _updateHandoff = true;
             Application.Current.Shutdown();
         }
-        catch (Exception ex) { UpdateFailure(ex); }
+        catch (Exception ex)
+        {
+            UpdateFailure(ex);
+            await ResumeNukeAfterFailedRestartAsync();
+        }
     }
 
     private void UpdateFailure(Exception ex)

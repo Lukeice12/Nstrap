@@ -20,6 +20,7 @@ internal sealed class UpdateJob
     public string NewVersion { get; set; } = "";
     public string OldHash { get; set; } = "";
     public string NewHash { get; set; } = "";
+    public bool RestartGuardRequired { get; set; }
 }
 
 internal sealed class UpdateStatus
@@ -226,7 +227,7 @@ internal static class UpdateHandoff
                 Token = ticket.Token, Target = Environment.ProcessPath!, ParentId = parent.Id,
                 ParentStartedUtc = parent.StartTime.ToUniversalTime().Ticks,
                 OldVersion = GitHubUpdates.CurrentVersion.ToString(3), NewVersion = release.Version.ToString(3),
-                OldHash = Hash(Environment.ProcessPath!)
+                OldHash = Hash(Environment.ProcessPath!), RestartGuardRequired = true
             };
             progress.Report("Downloading update...");
             await GitHubUpdates.DownloadAsync(release, directory, progress);
@@ -257,6 +258,7 @@ internal static class UpdateHandoff
             throw new IOException("The running application no longer matches this update.");
         string directory = JobDirectory(ticket.Id), helper = Path.Combine(directory, HelperName);
         if (!HashMatches(helper, job.OldHash)) throw new IOException("The update helper changed.");
+        using var restart = EmergencyActions.CreateRestartGuard(ticket.Token);
         using var process = StartProcess(helper, "--update-helper", ticket);
         var timer = Stopwatch.StartNew();
         while (timer.Elapsed < TimeSpan.FromSeconds(12))
@@ -267,6 +269,7 @@ internal static class UpdateHandoff
                 // during the handoff cannot produce an automatic restart loop.
                 WriteStatus(job.NewVersion, $"The last update to {job.NewVersion} did not complete. Check for updates to retry.");
                 WriteMarker(directory, "commit", ticket.Token);
+                restart.Complete();
                 return;
             }
             if (process.HasExited) throw new IOException("The update helper could not prepare the replacement. Check folder permissions or use releases.");
@@ -292,6 +295,70 @@ internal static class UpdateHandoff
             || !HashMatches(job.Target, rollback ? job.OldHash : job.NewHash)
             || GitHubUpdates.CurrentVersion != Version.Parse(rollback ? job.OldVersion : job.NewVersion))
             throw new IOException("This update restart does not match the installed executable.");
+    }
+
+    internal static void WatchRestartGuard(UpdateTicket ticket)
+    {
+        // Releases before this protocol do not create a cancellation event.
+        // Their resumed UI acknowledges startup before registering hotkeys.
+        if (LoadJob(ticket).RestartGuardRequired)
+            EmergencyActions.WatchRestartGuard(ticket.Token);
+    }
+
+    internal static async Task AwaitRemovalReadyAsync(UpdateTicket ticket, bool rollback)
+    {
+        ValidateResume(ticket, rollback);
+        string directory = JobDirectory(ticket.Id);
+        var timer = Stopwatch.StartNew();
+        while (timer.Elapsed < TimeSpan.FromSeconds(15))
+        {
+            string? result = ReadMarker(directory, "result");
+            if (rollback ? result is not null
+                : result == "Updated successfully." && ReadMarker(directory, "ack") == ticket.Token) return;
+            await Task.Delay(100).ConfigureAwait(false);
+        }
+        throw new IOException("The update helper has not finished. The nuke shortcut cannot be armed until the update completes.");
+    }
+
+    internal static void RemoveCompletedCopiesFor(string currentTarget)
+    {
+        // Only successfully completed jobs for this exact portable location may
+        // authorize these two derived filenames. No sibling directory scan.
+        try
+        {
+            RequirePrivateDirectory(Root);
+            var elapsed = Stopwatch.StartNew();
+            foreach (string directory in Directory.EnumerateDirectories(Root).Take(100))
+            {
+                if (elapsed.Elapsed >= TimeSpan.FromSeconds(15)) break;
+                try
+                {
+                    string id = Path.GetFileName(directory);
+                    if (!Guid.TryParseExact(id, "N", out _)) continue;
+                    string jobPath = Path.Combine(directory, "job.json");
+                    RequireRegularPath(jobPath);
+                    if (!File.Exists(jobPath) || new FileInfo(jobPath).Length > 16 * 1024) continue;
+                    var stored = JsonSerializer.Deserialize<UpdateJob>(File.ReadAllBytes(jobPath));
+                    if (stored is null) continue;
+                    var ticket = new UpdateTicket(id, stored.Token);
+                    var job = LoadJob(ticket);
+                    if (!string.Equals(job.Target, currentTarget, StringComparison.OrdinalIgnoreCase)
+                        || ReadMarker(directory, "result") != "Updated successfully."
+                        || ReadMarker(directory, "ack") != ticket.Token) continue;
+                    foreach (var entry in new[] { (Backup(job, ticket), job.OldHash), (Candidate(job, ticket), job.NewHash) })
+                    {
+                        try
+                        {
+                            using var file = RemovalFiles.PinExecutable(entry.Item1, entry.Item2);
+                            RemovalFiles.DeletePinned(file);
+                        }
+                        catch { /* A missing or changed copy is preserved. */ }
+                    }
+                }
+                catch { /* Untrusted or incomplete records authorize no cleanup. */ }
+            }
+        }
+        catch { }
     }
 
     public static void AcknowledgeStartup(UpdateTicket ticket, bool rollback)

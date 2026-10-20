@@ -33,7 +33,9 @@ public sealed partial class MainViewModel
         new("N strap updates", "Check for updates, install a release or change automatic updates.", 5, "updates update upgrade github release automatic download restart version"),
         new("Color theme", "Choose Crimson, Dark or Light. Changes apply immediately.", 6, "appearance color theme crimson dark light palette"),
         new("Program names", "Customize the display name or rename the executable and process.", 6, "appearance title sidebar task manager exe filename identity rename"),
-        new("Custom icon", "Choose your own PNG or ICO for the sidebar, window and taskbar.", 6, "appearance image logo icon artwork reset original")
+        new("Custom icon", "Choose your own PNG or ICO for the sidebar, window and taskbar.", 6, "appearance image logo icon artwork reset original"),
+        new("Kill switch", "Set a global shortcut to close N strap immediately.", 7, "experimental hotkey keyboard shortcut kill switch exit silent emergency"),
+        new("Nuke", "Set an opt-in shortcut to remove N strap and its saved data.", 7, "experimental hotkey keyboard shortcut uninstall remove delete nuke silent")
     ];
     private string _settingsSearch = "";
     public ObservableCollection<SettingsSearchResult> SettingsSearchResults { get; } = [];
@@ -77,6 +79,7 @@ public partial class MainWindow
             4 => SettingsNav,
             5 => UpdatesNav,
             6 => AppearanceNav,
+            7 => ExperimentalNav,
             _ => null
         };
         if (navigation is null) return;

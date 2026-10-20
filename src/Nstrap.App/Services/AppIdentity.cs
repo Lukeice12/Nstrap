@@ -77,6 +77,7 @@ internal static class AppIdentity
         UpdateHandoff.CreatePrivateDirectory(Root);
         CleanCompletedJobs();
         var ticket = new IdentityTicket(Guid.NewGuid().ToString("N"), Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
+        using var restart = EmergencyActions.CreateRestartGuard(ticket.Token);
         string directory = JobDirectory(ticket);
         UpdateHandoff.CreatePrivateDirectory(directory);
         bool copied = false;
@@ -112,6 +113,7 @@ internal static class AppIdentity
                 {
                     if (process.HasExited) throw new IOException("The renamed executable exited before the handoff.");
                     WriteMarker(directory, "commit", ticket.Token);
+                    restart.Complete();
                     return; // The caller now shuts down; it must not start another operation.
                 }
                 if (process.HasExited) throw new IOException("The renamed executable could not prepare its restart.");

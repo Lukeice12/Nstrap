@@ -20,6 +20,7 @@ public partial class MainWindow : Window
         InitializeFpsControls();
         InitializeGraphicsQualityControls();
         InitializePresetControls();
+        InitializeExperimentalControls();
         ThemeManager.Attach(this);
         Closing += OnClosing;
         Loaded += OnLoaded;
@@ -290,7 +291,12 @@ public partial class MainWindow : Window
     }
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (((App)Application.Current).IdentityRestart is { } identityRestart)
+        var app = (App)Application.Current;
+        // Older updater helpers do not know the emergency cancellation protocol.
+        // Acknowledge their handoff before any emergency shortcut can terminate us.
+        if (app.UpdateRestart is not null) await StartupUpdatesAsync();
+        InitializeKillSwitchHotkey();
+        if (app.IdentityRestart is { } identityRestart)
         {
             AppearanceNav.IsChecked = true;
             try
@@ -300,7 +306,8 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { Model.Error(ex); }
         }
-        else if (await StartupUpdatesAsync()) return;
+        else if (app.UpdateRestart is null && await StartupUpdatesAsync()) return;
+        await Busy(InitializeNukeHotkeyAsync);
         if (Model.UnlockFps || Model.FpsChangePending) await Busy(async () => { await ReconcileFpsAsync(); });
         if (Model.GraphicsQualityChangePending) await Busy(async () => { await ReconcileGraphicsQualityAsync(); });
     }
