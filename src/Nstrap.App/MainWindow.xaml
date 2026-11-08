@@ -90,6 +90,7 @@
           <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding HasSettingsSearch}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
           <RadioButton x:Name="HomeNav" Style="{StaticResource NavButton}" IsChecked="True" Tag="0" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Overview"/></StackPanel></RadioButton>
           <RadioButton x:Name="FlagsNav" Style="{StaticResource NavButton}" Tag="1" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="FastFlags"/></StackPanel></RadioButton>
+          <RadioButton x:Name="LiveFlagsNav" Style="{StaticResource NavButton}" Tag="8" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7F8;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Live flags"/></StackPanel></RadioButton>
           <RadioButton x:Name="PresetsNav" Style="{StaticResource NavButton}" Tag="2" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Presets"/></StackPanel></RadioButton>
           <RadioButton x:Name="RecoveryNav" Style="{StaticResource NavButton}" Tag="3" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Recovery"/></StackPanel></RadioButton>
           <RadioButton x:Name="AppearanceNav" Style="{StaticResource NavButton}" Tag="6" Checked="Navigate"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" Width="29" VerticalAlignment="Center"/><TextBlock Text="Appearance"/></StackPanel></RadioButton>
@@ -180,7 +181,7 @@
           <Grid Margin="28,25,28,20">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel><TextBlock Text="FastFlags" Style="{StaticResource PageTitle}"/><TextBlock Text="Edit your profile, then apply it to the selected client." Style="{StaticResource Muted}" Margin="0,6,12,0"/></StackPanel>
+              <StackPanel><TextBlock Text="FastFlags" Style="{StaticResource PageTitle}"/><TextBlock Text="Write settings and apply verified live flags to the selected running Player." Style="{StaticResource Muted}" Margin="0,6,12,0"/></StackPanel>
               <Button Grid.Column="1" Content="Apply profile" Click="ApplyClick" VerticalAlignment="Top"/>
             </Grid>
             <Border Grid.Row="1" Style="{StaticResource Card}" Padding="12" Margin="0,20,0,12">
@@ -550,6 +551,40 @@
             <TextBlock Text="Nuke pauses during updates and executable renames, then resumes after restart." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
           </StackPanel></ScrollViewer>
         </TabItem>
+        <TabItem>
+          <Grid Margin="28,25,28,20">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Live flags" Style="{StaticResource PageTitle}"/><TextBlock Text="{Binding SelectedProfileName, StringFormat=Profile: {0}}" Style="{StaticResource Muted}" Margin="0,6,12,0"/></StackPanel>
+              <Button Grid.Column="1" Content="Refresh status" Click="RefreshLiveFlagsClick" VerticalAlignment="Top"/>
+            </Grid>
+            <StackPanel Grid.Row="1" Margin="0,16,0,14">
+              <TextBlock Text="On applies the saved value; off restores the original. Some changes need rejoining to reset game state." Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+              <TextBlock Text="Live controls are independent of the profile's Enabled checkboxes." Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+              <TextBlock Text="{Binding LiveFlagSummary}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,9,0,0"/>
+            </StackPanel>
+            <TextBox Grid.Row="2" Text="{Binding LiveFlagSearch, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search live flags by name or state" AutomationProperties.Name="Search live flags" Padding="10,7" Margin="0,0,0,12"/>
+            <DataGrid Grid.Row="3" ItemsSource="{Binding LiveFlagsView}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False"
+                      Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+                      RowHeaderWidth="0" HeadersVisibility="Column" MinRowHeight="54" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource TableLineBrush}"
+                      EnableRowVirtualization="True" EnableColumnVirtualization="True" SelectionMode="Single" SelectionUnit="FullRow">
+              <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="{DynamicResource HeaderBrush}"/><Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/><Setter Property="Padding" Value="8,10"/><Setter Property="BorderThickness" Value="0"/></Style>
+                <Style TargetType="DataGridRow"><Setter Property="Background" Value="Transparent"/></Style>
+                <Style TargetType="DataGridCell"><Setter Property="BorderThickness" Value="0"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+              </DataGrid.Resources>
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Live" Width="66"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+                  <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsApplied, Mode=OneWay}" IsEnabled="{Binding CanToggle}" Click="LiveFlagToggleClick" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="{Binding Detail}" AutomationProperties.Name="{Binding Name}"/>
+                </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Flag" Width="*" MinWidth="220"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding Name}" Margin="8" TextWrapping="Wrap" ToolTip="{Binding Detail}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                <DataGridTextColumn Header="Saved" Binding="{Binding SavedValue}" Width="76"/>
+                <DataGridTextColumn Header="Current" Binding="{Binding CurrentValue}" Width="76"/>
+                <DataGridTemplateColumn Header="State" Width="250"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Margin="8,7" ToolTip="{Binding Detail}"><TextBlock Text="{Binding Status}"/><TextBlock Text="{Binding Detail}" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" MaxHeight="44" Margin="0,4,0,0"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </TabItem>
       </TabControl>
       <Border Grid.Row="1" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource FooterLineBrush}" BorderThickness="0,1,0,0" Padding="24,12">
         <StackPanel>
@@ -560,6 +595,7 @@
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding FlagCounter}" FontSize="12"/><TextBlock Text="Drafts save automatically" Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"/></StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Content="Live results" Click="RuntimeResultsClick" Margin="0,0,8,0" ToolTip="Inspect settings-independent runtime outcomes for every flag"/>
               <Button Content="Exit N strap" Click="ExitAppClick" Margin="0,0,8,0" ToolTip="Quit completely, including background mode"/>
               <Button Content="Launch Roblox" Style="{StaticResource Primary}" Click="LaunchClick" IsEnabled="{Binding IsIdle}" MinWidth="128" ToolTip="Closes running Roblox Player sessions before launching"/>
             </StackPanel>

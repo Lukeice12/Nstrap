@@ -12,6 +12,7 @@ public partial class App : Application
     private Mutex? _instance;
     private IDisposable? _revealReceiver;
     internal bool ShutdownRequested { get; private set; }
+    internal bool IsIsolatedDataDirectory { get; private set; }
     internal UpdateTicket? UpdateRestart { get; private set; }
     internal bool UpdateRolledBack { get; private set; }
     internal IdentityTicket? IdentityRestart { get; private set; }
@@ -55,6 +56,13 @@ public partial class App : Application
         try
         {
             string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nstrap");
+            if (e.Args is ["--data-dir", var isolatedDirectory])
+            {
+                if (!Path.IsPathFullyQualified(isolatedDirectory))
+                    throw new ArgumentException("--data-dir requires an absolute directory.");
+                dataDirectory = Path.GetFullPath(isolatedDirectory);
+                IsIsolatedDataDirectory = true;
+            }
             bool backgroundLaunch = e.Args.Length == 1 && e.Args[0] == "--background";
             bool? restartHidden = null;
             if (e.Args.FirstOrDefault() == "--identity-restart")
@@ -75,23 +83,32 @@ public partial class App : Application
                 EmergencyActions.TrackUpdateRestart(UpdateRestart, UpdateRolledBack);
                 restartHidden = UpdateHandoff.GetRestartStartHidden(UpdateRestart);
             }
-            if (UpdateRestart is null && IdentityRestart is null && e.Args.Length != 0 && !backgroundLaunch)
+            if (UpdateRestart is null && IdentityRestart is null && e.Args.Length != 0 && !backgroundLaunch && !IsIsolatedDataDirectory)
                 throw new ArgumentException($"Unknown or incomplete option: {e.Args[0]}");
             _instance = new Mutex(true, InstanceMutexName(dataDirectory), out bool first);
             if (!first)
             {
-                if (!backgroundLaunch && UpdateRestart is null && IdentityRestart is null)
+                if (!backgroundLaunch && UpdateRestart is null && IdentityRestart is null && !IsIsolatedDataDirectory)
                     await InstanceReveal.TryRevealExistingAsync();
                 RequestShutdown();
                 return;
             }
             DispatcherUnhandledException += OnUnhandledException;
             var model = new MainViewModel(dataDirectory);
+            if (IsIsolatedDataDirectory)
+            {
+                model.State.SilentModeEnabled = false;
+                model.State.MinimiseOnClose = false;
+                model.State.StartWithWindows = false;
+                model.State.AutoUpdate = false;
+                model.State.KillSwitchEnabled = false;
+                model.State.NukeEnabled = false;
+            }
             if (backgroundLaunch && !model.SilentModeEnabled) { RequestShutdown(); return; }
             ThemeManager.Apply(model.SelectedTheme);
             var window = new MainWindow(model);
             MainWindow = window;
-            _revealReceiver = InstanceReveal.StartReceiver(() =>
+            if (!IsIsolatedDataDirectory) _revealReceiver = InstanceReveal.StartReceiver(() =>
             {
                 if (!Dispatcher.HasShutdownStarted)
                     Dispatcher.BeginInvoke(new Action(window.RevealFromLaunch));

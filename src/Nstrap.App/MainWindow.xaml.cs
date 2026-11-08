@@ -11,6 +11,8 @@ namespace Nstrap.App;
 
 public partial class MainWindow : Window
 {
+    private readonly RuntimeFlagService _runtimeFlags = new();
+    private RuntimeFlagReport? _runtimeReport;
     public MainViewModel Model { get; }
     public MainWindow(MainViewModel model)
     {
@@ -22,6 +24,7 @@ public partial class MainWindow : Window
         InitializePresetControls();
         InitializeExperimentalControls();
         InitializeBackgroundProfileControls();
+        InitializeLiveFlagControls();
         ThemeManager.Attach(this);
         Closing += OnClosing;
         Closed += (_, _) => ((App)Application.Current).RequestShutdown();
@@ -43,14 +46,28 @@ public partial class MainWindow : Window
     });
     private RobloxInstallation RequireInstallation() =>
         Model.SelectedInstallation ?? throw new InvalidOperationException("Choose an installed Roblox client, or install Player from Overview first.");
-    private async Task ApplySelectedAsync()
+    private Task ApplySelectedAsync() => ApplySelectedAsync(applyRuntime: true);
+    private async Task ApplySelectedAsync(bool applyRuntime)
     {
         var installation = RequireInstallation();
         FlagValidator.Validate(Model.SelectedProfile.Flags);
         Model.Save();
-        var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
-        Model.Success($"Applied {result.ManagedCount} flag{(result.ManagedCount == 1 ? "" : "s")} to Roblox {installation.Kind}.",
-            $"Profile: {Model.SelectedProfile.Name}. Restart the client to load these settings.");
+        var profile = Model.SelectedProfile.Copy(Model.SelectedProfile.Name);
+        string settings;
+        bool settingsError = false;
+        try
+        {
+            var result = await Task.Run(() => Model.Applier.Apply(installation, profile));
+            settings = $"Wrote {result.ManagedCount} settings to Roblox {installation.Kind}.";
+        }
+        catch (Exception error) { settingsError = true; settings = "Settings file was not written: " + error.Message; }
+        if (applyRuntime)
+        {
+            _runtimeReport = await Task.Run(() => _runtimeFlags.Apply(installation, profile, _startupCancellation.Token));
+            Model.Success(settings, _runtimeReport.Summary + " Open Live results for each flag.");
+        }
+        else Model.Success(settings, "Settings-file values load at client startup; runtime application follows launch.");
+        Model.HasError = settingsError || (applyRuntime && _runtimeReport?.RequiresAttention == true);
     }
     private async void ApplyClick(object sender, RoutedEventArgs e) => await Busy(ApplySelectedAsync);
     private async void LaunchClick(object sender, RoutedEventArgs e)
@@ -70,13 +87,25 @@ public partial class MainWindow : Window
             await Task.Run(OfficialClient.ClosePlayerClientsAsync);
             string fpsFeedback = client.Kind == ClientKind.Player ? await ReconcileFpsAsync() : "";
             string qualityFeedback = client.Kind == ClientKind.Player ? await ReconcileGraphicsQualityAsync() : "";
-            if (Model.ApplyBeforeLaunch) await ApplySelectedAsync();
+            bool settingsFailed = false;
+            if (Model.ApplyBeforeLaunch) await ApplySelectedAsync(applyRuntime: false);
+            settingsFailed = Model.ApplyBeforeLaunch && Model.HasError;
             Model.Success($"Verifying Roblox {client.Kind}…", "Windows is checking its signature.");
             await Task.Run(() => OfficialClient.Launch(client));
             launched = true;
+            string runtimeFeedback = "";
+            if (Model.ApplyBeforeLaunch && client.Kind == ClientKind.Player)
+            {
+                Model.Success("Waiting for the selected Player…", "Live flags are applied once after the exact client is verified.");
+                _runtimeReport = await _runtimeFlags.ApplyWhenReadyAsync(client, Model.SelectedProfile.Copy(Model.SelectedProfile.Name),
+                    TimeSpan.FromSeconds(20), _startupCancellation.Token);
+                runtimeFeedback = _runtimeReport.Summary;
+            }
             Model.Success(alreadyRunning ? $"Roblox {client.Kind} is already running." : $"Roblox {client.Kind} started.",
-                string.Join(" ", new[] { alreadyRunning && Model.ApplyBeforeLaunch ? "Profile saved. Restart Roblox to load the changed flags." : "", fpsFeedback, qualityFeedback }
+                string.Join(" ", new[] { alreadyRunning && Model.ApplyBeforeLaunch ? "Settings written. Restart Studio to load changed settings." : "", fpsFeedback, qualityFeedback, runtimeFeedback }
                     .Where(message => !string.IsNullOrEmpty(message))));
+            if (settingsFailed) { Model.HasError = true; Model.Status += " Settings-file write failed."; }
+            if (Model.ApplyBeforeLaunch && _runtimeReport?.RequiresAttention == true) Model.HasError = true;
         });
         // Close only after Busy's finally runs, through the existing save/cancel handler.
         if (launched && Model.CloseAfterLaunch && !Model.IsBusy) Close();
@@ -91,9 +120,18 @@ public partial class MainWindow : Window
     private async void RestoreClick(object sender, RoutedEventArgs e) => await Busy(async () =>
     {
         var installation = RequireInstallation();
-        await Task.Run(() => Model.Applier.Restore(installation));
+        _runtimeReport = await Task.Run(() => _runtimeFlags.Restore(installation));
+        try { await Task.Run(() => Model.Applier.Restore(installation)); }
+        catch (Exception error)
+        {
+            Model.Error(error);
+            Model.Status = "Settings-file restore failed. Live results are available.";
+            Model.StatusDetail = error.Message + " " + _runtimeReport.Summary;
+            return;
+        }
         SuspendBackgroundProfileAfterRestore();
-        Model.Success($"Restored managed settings for Roblox {installation.Kind}.", "Original values returned. Restart the client to load these settings.");
+        Model.Success($"Restored owned settings-file values for Roblox {installation.Kind}.", _runtimeReport.Summary + " Open Live results for details.");
+        Model.HasError = _runtimeReport.RequiresAttention;
     });
     private void ChooseFolderClick(object sender, RoutedEventArgs e) => Run(() =>
     {
@@ -239,10 +277,9 @@ public partial class MainWindow : Window
         Model.Success($"Imported {imported}. Applying profile…");
         try
         {
-            var installation = RequireInstallation();
-            var result = await Task.Run(() => Model.Applier.Apply(installation, Model.SelectedProfile));
-            Model.Success($"Imported {imported}; applied {result.ManagedCount}.",
-                $"Roblox {installation.Kind} · {Model.SelectedProfile.Name}. Restart the client to load these flags. {plan.Notice}".TrimEnd());
+            await ApplySelectedAsync();
+            Model.Status = $"Imported {imported}. " + Model.Status;
+            Model.StatusDetail += " " + plan.Notice;
         }
         catch (Exception ex)
         {
@@ -263,6 +300,8 @@ public partial class MainWindow : Window
     private void DotNetRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/runtime"));
     private void WpfRepositoryClick(object sender, RoutedEventArgs e) => Run(() => OfficialClient.OpenWeb("https://github.com/dotnet/wpf"));
     private void ViewNoticesClick(object sender, RoutedEventArgs e) => Run(() => new LicensesWindow { Owner = this }.ShowDialog());
+    private void RuntimeResultsClick(object sender, RoutedEventArgs e) => Run(() =>
+        new RuntimeResultsWindow(_runtimeReport?.Detail ?? "No live operation has run. Apply writes settings and then attempts verified runtime flags for the exact selected running Player.") { Owner = this }.ShowDialog());
     private void CopyDiscordClick(object sender, RoutedEventArgs e) => Run(() =>
     {
         Clipboard.SetText("lukeistaken");
@@ -298,6 +337,11 @@ public partial class MainWindow : Window
     {
         if (IsExitPending) return;
         var app = (App)Application.Current;
+        if (app.IsIsolatedDataDirectory)
+        {
+            Model.Success("Isolated profile directory.", "Startup automation is disabled for this run. Apply and Restore still target the explicitly selected Roblox installation. Runtime receipts stay on J:.");
+            return;
+        }
         // Older updater helpers do not know the emergency cancellation protocol.
         // Acknowledge their handoff before any emergency shortcut can terminate us.
         if (app.UpdateRestart is not null) await StartupUpdatesAsync(_startupCancellation.Token);
